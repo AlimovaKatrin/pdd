@@ -451,97 +451,78 @@ p {
   letter-spacing: 1.2px;
 }
 
-.lesson-heading {
-  align-items: center;
-  display: flex;
-  gap: 10px;
-  justify-content: space-between;
-  margin-top: 10px;
+.guide-topics {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  margin: 16px 0;
 }
 
-.lesson-heading h2 {
+.guide-topics button {
+  align-items: center;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-control);
+  display: flex;
+  flex-direction: column;
+  font-size: 9px;
+  gap: 6px;
+  min-width: 0;
+  padding: 10px 8px;
+}
+
+.guide-topics button:hover {
+  background: var(--color-surface);
+}
+
+.guide-topics button[aria-pressed='true'] {
+  background: var(--color-primary);
+  color: var(--color-surface);
+}
+
+.guide-content {
+  min-height: 152px;
+}
+
+.guide-content h2 {
   font-size: 18px;
-  font-weight: 650;
-  letter-spacing: -0.7px;
-  line-height: 1.35;
+  line-height: 1.3;
   margin: 0;
 }
 
-.stop-sign {
-  background: #b75645;
-  clip-path: polygon(28% 0, 72% 0, 100% 28%, 100% 72%, 72% 100%, 28% 100%, 0 72%, 0 28%);
-  color: #fff6e9;
-  display: grid;
-  flex: none;
-  font-size: 10px;
-  font-weight: 800;
-  height: 46px;
-  letter-spacing: 0.3px;
-  place-items: center;
-  width: 46px;
-}
-
-.stop-sign.small {
-  font-size: 7px;
-  height: 32px;
-  width: 32px;
-}
-
-.lesson-card > p {
-  color: #7f8c74;
-  font-size: 10px;
-  line-height: 1.5;
-  margin: 12px 0 0;
-  margin-top: 8px;
-}
-
-.lesson-divider {
-  background: #dae2ce;
-  height: 1px;
-  margin: 12px 0;
-}
-
-.current-lesson {
-  align-items: center;
+.guide-location {
+  align-items: flex-start;
   display: flex;
-  gap: 10px;
-}
-
-.lesson-index {
-  background: #e0e8d3;
-  border-radius: 6px;
-  color: #779267;
-  display: grid;
-  font-size: 10px;
-  height: 28px;
-  place-items: center;
-  width: 28px;
-}
-
-.current-lesson strong {
-  display: block;
   font-size: 11px;
+  gap: 4px;
+  line-height: 1.5;
+  margin: 10px 0;
 }
 
-.current-lesson span:not(.lesson-index) {
-  color: #95a087;
-  display: block;
-  font-size: 9px;
-  margin-top: 4px;
+.guide-location svg {
+  flex: none;
+  margin-top: 1px;
 }
 
-.lesson-card .lesson-hint {
-  font-size: 10px;
-  margin-top: 8px;
+.guide-hint {
+  font-size: 12px;
+  line-height: 1.6;
+  margin: 0;
 }
 
-.scope-pill {
-  align-items: center;
-  color: #718465;
+.guide-footer {
+  border-top: 1px solid var(--color-border);
   display: flex;
-  font-size: 9px;
-  gap: 6px;
-  margin-top: 8px;
+  font-size: 10px;
+  gap: 8px;
+  justify-content: space-between;
+  margin-top: 12px;
+  padding-top: 12px;
+}
+
+.guide-footer > span:last-child {
+  flex: none;
+  font-variant-numeric: tabular-nums;
 }
 
 .controls-card {
@@ -808,11 +789,12 @@ kbd {
   box-shadow: 0 10px 45px #354e3b25;
   left: 50%;
   padding: 28px;
-  position: absolute;
+  position: fixed;
   text-align: center;
-  top: 45%;
+  top: 50%;
   transform: translate(-50%, -50%);
-  width: 330px;
+  width: min(330px, calc(100vw - 32px));
+  z-index: 6;
 }
 
 .pause-card > svg {
@@ -1076,34 +1058,42 @@ kbd {
 }
 
 .journal-list {
-  max-height: 340px;
-  overflow: auto;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 6px;
+  scrollbar-gutter: stable;
 }
 
 .journal-list > button {
   align-items: center;
   background: none;
   border-bottom: 1px solid var(--color-border);
-  display: flex;
+  display: grid;
   gap: 12px;
+  grid-template-columns: 100px minmax(0, 1fr) 18px;
   padding: 16px 0;
   text-align: left;
   width: 100%;
 }
 
 .journal-list > button > span:nth-child(2) {
-  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .journal-list strong {
   display: block;
-  font-size: 12px;
+  font-size: 16px;
+  line-height: 1.4;
 }
 
 .journal-list small {
   color: #97a08f;
   display: block;
-  font-size: 10px;
+  font-size: 13px;
+  line-height: 1.5;
   margin-top: 5px;
 }
 
@@ -1167,32 +1157,6 @@ kbd {
   .lesson-card,
   .progress-card {
     padding: 10px 14px;
-  }
-
-  .lesson-heading {
-    margin-top: 6px;
-  }
-
-  .lesson-heading h2 {
-    font-size: 17px;
-    line-height: 1.25;
-  }
-
-  .lesson-card > p {
-    line-height: 1.4;
-    margin-top: 6px;
-  }
-
-  .lesson-divider {
-    margin: 8px 0;
-  }
-
-  .lesson-card .lesson-hint {
-    margin-top: 6px;
-  }
-
-  .scope-pill {
-    margin-top: 6px;
   }
 
   .section-heading {
@@ -1343,47 +1307,6 @@ kbd {
     letter-spacing: 0.5px;
   }
 
-  .lesson-heading {
-    gap: 6px;
-    margin-top: 7px;
-  }
-
-  .lesson-heading h2 {
-    font-size: 14px;
-  }
-
-  .lesson-heading .stop-sign {
-    font-size: 7px;
-    height: 32px;
-    width: 32px;
-  }
-
-  .lesson-card > p {
-    font-size: 9px;
-    line-height: 1.4;
-  }
-
-  .lesson-divider {
-    margin: 8px 0;
-  }
-
-  .current-lesson {
-    gap: 6px;
-  }
-
-  .current-lesson strong {
-    font-size: 9px;
-  }
-
-  .current-lesson span:not(.lesson-index) {
-    font-size: 8px;
-  }
-
-  .lesson-card .lesson-hint,
-  .scope-pill {
-    font-size: 8px;
-  }
-
   .control-row {
     flex-wrap: wrap;
     font-size: 9px;
@@ -1435,6 +1358,37 @@ kbd {
     font-size: 8px;
     gap: 4px 12px;
     padding: 8px 0;
+  }
+}
+
+@media (height <= 800px), (width <= 900px) {
+  .guide-topics {
+    margin: 12px 0;
+  }
+
+  .guide-topics button {
+    padding: 8px;
+  }
+
+  .guide-content {
+    min-height: 112px;
+  }
+
+  .guide-content h2 {
+    font-size: 16px;
+  }
+
+  .guide-location {
+    margin: 6px 0;
+  }
+
+  .guide-hint {
+    line-height: 1.45;
+  }
+
+  .guide-footer {
+    margin-top: 8px;
+    padding-top: 8px;
   }
 }
 
@@ -1512,24 +1466,6 @@ kbd {
   .progress-card {
     padding-bottom: 8px;
     padding-top: 8px;
-  }
-
-  .lesson-heading {
-    margin-top: 4px;
-  }
-
-  .lesson-divider {
-    margin: 6px 0;
-  }
-
-  .lesson-index {
-    height: 24px;
-    width: 24px;
-  }
-
-  .lesson-card .lesson-hint,
-  .scope-pill {
-    margin-top: 4px;
   }
 
   .controls-card kbd {
@@ -1729,5 +1665,177 @@ kbd {
     font-size: 10px;
     gap: 6px;
     padding: 10px;
+  }
+}
+
+.speed-limit {
+  border: 2px solid #b7483e;
+  border-radius: 50%;
+  display: grid;
+  font-size: 11px;
+  height: 28px;
+  min-width: 28px;
+  place-items: center;
+}
+
+.pagination,
+.review-tabs {
+  align-items: center;
+  display: flex;
+  font-size: 10px;
+  gap: 12px;
+  justify-content: space-between;
+  margin: 8px 0;
+}
+
+.pagination .secondary {
+  padding: 5px 12px;
+}
+
+.incident-symbol {
+  color: var(--color-primary);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.cause-title {
+  display: block;
+  font-size: 11px;
+  margin-bottom: 8px;
+}
+
+.question-image {
+  display: block;
+  height: 200px;
+  object-fit: contain;
+  width: 100%;
+}
+
+.attempt-timeline {
+  font-size: 12px;
+  min-height: 200px;
+}
+
+.journal-filters {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 16px 0 8px;
+}
+
+.journal-filters label {
+  display: grid;
+  font-size: 13px;
+  gap: 8px;
+}
+
+.journal-select {
+  position: relative;
+}
+
+.journal-select > svg {
+  pointer-events: none;
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.journal-filters select {
+  appearance: none;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  color: var(--color-text);
+  font: inherit;
+  font-size: 16px;
+  line-height: 1.5;
+  min-height: 50px;
+  min-width: 0;
+  padding: 12px 44px 12px 16px;
+  width: 100%;
+}
+
+.journal-modal.wide {
+  display: flex;
+  flex-direction: column;
+  height: min(820px, calc(100dvh - 48px));
+  width: 1000px;
+}
+
+.journal-modal > :not(.journal-list) {
+  flex-shrink: 0;
+}
+
+.journal-modal h2 {
+  font-size: 32px;
+}
+
+.journal-modal .modal-kicker {
+  font-size: 11px;
+}
+
+.journal-modal .source-note {
+  font-size: 13px;
+}
+
+.journal-modal .incident-symbol {
+  font-size: 12px;
+}
+
+.journal-modal .modal-actions button,
+.journal-modal .confirm-clear {
+  font-size: 14px;
+}
+
+.journal-modal .confirm-clear button {
+  font-size: inherit;
+}
+
+.journal-modal .modal-actions {
+  margin-top: 16px;
+  padding-top: 16px;
+}
+
+.trip-summary,
+.journal-empty {
+  font-size: 14px;
+  line-height: 1.5;
+  margin: 12px 0;
+}
+
+@media (width <= 640px) {
+  .journal-modal {
+    padding: 24px 16px;
+  }
+
+  .journal-modal .journal-list > button {
+    gap: 8px;
+    padding: 12px 0;
+  }
+
+  .journal-modal h2 {
+    font-size: 26px;
+  }
+
+  .journal-filters {
+    grid-template-columns: 1fr;
+  }
+}
+
+.compact-review-tabs {
+  display: none;
+}
+
+@media (width <= 640px) {
+  .compact-review-tabs {
+    display: flex;
+    gap: 16px;
+    margin: 12px 0;
+  }
+
+  .pane-context .incident-question,
+  .pane-question .incident-context {
+    display: none;
   }
 }

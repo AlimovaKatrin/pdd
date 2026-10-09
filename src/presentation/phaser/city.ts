@@ -1,9 +1,11 @@
+import { signalColor } from '../../domain/world/traffic';
 import Phaser from 'phaser';
 import type { GameSession } from '../../use-cases/session/game-session';
 const SCALE = 8;
 export function mountCity(parent: HTMLElement, session: GameSession) {
   class CityScene extends Phaser.Scene {
     private car!: Phaser.GameObjects.Container;
+    private traffic!: Phaser.GameObjects.Graphics;
     private lamps!: Phaser.GameObjects.Graphics;
     create() {
       const g = this.add.graphics();
@@ -124,6 +126,33 @@ export function mountCity(parent: HTMLElement, session: GameSession) {
       label(685, 621, 'МАСТЕРСКАЯ');
       label(355, 400, 'САДОВАЯ УЛИЦА', '#d7dfd7');
       label(685, 672, 'ТИХИЙ ПРОЕЗД', '#d7dfd7');
+      for (const zone of session.map.speedZones ?? []) {
+        const x = zone.sign.x * SCALE,
+          y = zone.sign.y * SCALE + 14;
+        g.fillStyle(0xfafbf5);
+        g.fillCircle(x, y, 13);
+        g.lineStyle(3, 0xba493f);
+        g.strokeCircle(x, y, 13);
+        label(x, y, String(zone.limit), '#253e34', 13);
+        label(x + 24, y, '→', '#253e34', 16);
+      }
+      for (const c of session.map.crossings ?? []) {
+        g.fillStyle(0xf4f0dd);
+        for (let x = Math.min(c.from.x, c.to.x); x < Math.max(c.from.x, c.to.x); x += 1.5) {
+          g.fillRect(x * SCALE, (c.from.y - 1.5) * SCALE, 0.8 * SCALE, 3 * SCALE);
+        }
+        label(c.to.x * SCALE + 18, c.to.y * SCALE, 'ПЕШЕХОД', '#253e34', 8);
+      }
+      for (const signal of session.map.signals ?? []) {
+        g.lineStyle(4, 0xf4f0dd);
+        g.lineBetween(
+          signal.line.a.x * SCALE,
+          signal.line.a.y * SCALE,
+          signal.line.b.x * SCALE,
+          signal.line.b.y * SCALE,
+        );
+      }
+      this.traffic = this.add.graphics();
       for (const stop of session.map.stops) {
         g.lineStyle(4, 0xf4f0dd);
         g.lineBetween(stop.a.x * SCALE, stop.a.y * SCALE, stop.b.x * SCALE, stop.b.y * SCALE);
@@ -173,6 +202,38 @@ export function mountCity(parent: HTMLElement, session: GameSession) {
       }
       const world = session.getWorld(),
         car = world.vehicle;
+      this.traffic.clear();
+      for (const signal of session.map.signals ?? []) {
+        const color = signalColor(signal, world.tick),
+          x = signal.line.b.x * SCALE + 12,
+          y = signal.line.b.y * SCALE;
+        this.traffic.fillStyle(0x263b33);
+        this.traffic.fillRoundedRect(x - 7, y - 22, 14, 44, 5);
+        for (const [i, lamp] of ['red', 'yellow', 'green'].entries()) {
+          const active = color === lamp || (color === 'red-yellow' && lamp !== 'green');
+          this.traffic.fillStyle(
+            active
+              ? lamp === 'red'
+                ? 0xff574d
+                : lamp === 'yellow'
+                  ? 0xffd35c
+                  : 0x82d99a
+              : 0x51655b,
+          );
+          this.traffic.fillCircle(x, y - 13 + i * 13, 4.5);
+        }
+      }
+      for (const c of session.map.crossings ?? []) {
+        const p = world.pedestrians[c.id];
+        const x = (c.from.x + (c.to.x - c.from.x) * p.progress) * SCALE,
+          y = (c.from.y + (c.to.y - c.from.y) * p.progress) * SCALE;
+        this.traffic.fillStyle(0xfafbf5);
+        this.traffic.fillCircle(x, y, 7);
+        this.traffic.fillStyle(p.reaction ? 0xb7483e : 0x304e83);
+        this.traffic.fillCircle(x, y, 5);
+        this.traffic.fillStyle(0xf4ca9e);
+        this.traffic.fillCircle(x, y - 2, 2.8);
+      }
       this.car.setPosition(car.x * SCALE, car.y * SCALE).setRotation(car.heading);
       this.lamps.clear();
       if (car.indicator && Math.floor(world.tick / 20) % 2 === 0) {

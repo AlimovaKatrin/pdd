@@ -1,11 +1,17 @@
+import { checkTurn } from '../maneuvers/turn';
+import { updateDrivingProgress } from './driving-progress';
+import { checkSpeed } from '../rules/speed';
+import { checkSignals } from '../rules/signals';
+import { checkPedestrians } from '../rules/pedestrians';
+import { cause } from '../violations/causes';
 import { checkStop } from '../rules/stop';
-import { type Controls, type RoadMap, type StopViolation, type World } from '../world/model';
+import { type Controls, type RoadMap, type DetectedViolation, type World } from '../world/model';
 export const STEP = 1 / 60;
 export function stepWorld(
   world: World,
   controls: Controls,
   map: RoadMap,
-): { world: World; violations: StopViolation[] } {
+): { world: World; violations: DetectedViolation[] } {
   const v = { ...world.vehicle };
   if (controls.brake || (controls.throttle && controls.reverse)) {
     v.speed = Math.sign(v.speed) * Math.max(0, Math.abs(v.speed) - 12 * STEP);
@@ -19,13 +25,6 @@ export function stepWorld(
   v.speed = Math.max(-3, Math.min(12, v.speed));
   const rotation = ((controls.steer * v.speed) / 5.5) * STEP;
   v.heading += rotation;
-  if (v.indicator) {
-    v.indicatorTurn += rotation;
-    if (Math.abs(v.indicatorTurn) > 0.65 && controls.steer === 0) {
-      v.indicator = null;
-      v.indicatorTurn = 0;
-    }
-  }
   const x = v.x + Math.cos(v.heading) * v.speed * STEP;
   const y = v.y + Math.sin(v.heading) * v.speed * STEP;
   // Prototype road corridor: prevents driving through decorative buildings.
@@ -38,17 +37,36 @@ export function stepWorld(
   } else {
     v.speed = 0;
   }
-  const next: World = { ...world, tick: world.tick + 1, vehicle: v, stops: { ...world.stops } };
-  const violations: StopViolation[] = [];
+  const next: World = {
+    ...world,
+    tick: world.tick + 1,
+    vehicle: v,
+    stops: { ...world.stops },
+    speedEpisodes: structuredClone(world.speedEpisodes),
+    signalEpisodes: structuredClone(world.signalEpisodes),
+    pedestrians: { ...world.pedestrians },
+    advisories: world.tick < world.advisoryUntil ? world.advisories : [],
+  };
+  const violations: DetectedViolation[] = [];
   for (const line of map.stops) {
     const result = checkStop(world.vehicle, v, line, world.stops[line.id], next.tick);
     next.stops[line.id] = result.episode;
     if (result.violation) {
-      violations.push(result.violation);
+      violations.push({
+        ...result.violation,
+        causes: [cause('stop-line', { speedKmh: v.speed * 3.6, stopped: false })],
+      });
     }
     if (result.passed) {
-      next.successfulStops += 1;
+      next.successfulManeuvers += 1;
     }
   }
+  violations.push(
+    ...checkSpeed(next, map),
+    ...checkSignals(world, next, map),
+    ...checkTurn(world, next, map),
+    ...checkPedestrians(world, next, map, STEP),
+  );
+  updateDrivingProgress(world, next, map, violations);
   return { world: next, violations };
 }

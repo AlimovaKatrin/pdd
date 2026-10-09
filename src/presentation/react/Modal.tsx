@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ReactNode } from 'react';
+import { useEffect, useRef, type ReactNode, type RefObject } from 'react';
 import { X } from 'lucide-react';
 export function Modal({
   title,
@@ -6,12 +6,14 @@ export function Modal({
   onClose,
   wide = false,
   className = '',
+  initialFocus,
 }: {
   title: string;
   children: ReactNode;
   onClose: () => void;
   wide?: boolean;
   className?: string;
+  initialFocus?: RefObject<HTMLElement | null>;
 }) {
   const ref = useRef<HTMLDivElement>(null),
     close = useRef(onClose);
@@ -21,10 +23,13 @@ export function Modal({
   useEffect(() => {
     const previous = document.activeElement as HTMLElement | null;
     const dialog = ref.current!;
-    const elements = () => [
-      ...dialog.querySelectorAll<HTMLElement>('button:not(:disabled), a[href], [tabindex="0"]'),
-    ];
-    elements()[0]?.focus();
+    const elements = () =>
+      [
+        ...dialog.querySelectorAll<HTMLElement>(
+          'button:not(:disabled), a[href], input:not(:disabled), select:not(:disabled), [tabindex="0"]',
+        ),
+      ].filter((element) => element.getClientRects().length > 0);
+    (initialFocus?.current ?? elements()[0])?.focus({ preventScroll: true });
     const keydown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         e.preventDefault();
@@ -50,7 +55,7 @@ export function Modal({
       dialog.removeEventListener('keydown', keydown);
       previous?.focus();
     };
-  }, []);
+  }, [initialFocus]);
   return (
     <div className="modal-backdrop">
       <div

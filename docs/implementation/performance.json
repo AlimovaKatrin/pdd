@@ -1,0 +1,33 @@
+{
+  "measuredAt": "2026-10-09T17:39:27.346Z",
+  "runtime": {
+    "node": "v22.23.1",
+    "browser": "156.0.8078.4",
+    "platform": "darwin",
+    "arch": "arm64",
+    "cpu": "Apple M2 Pro",
+    "viewport": "1280x720",
+    "build": "Vite development, headless Chromium, one map"
+  },
+  "budgets": {
+    "simulationP95BatchAverageMs": 1,
+    "frameP95Ms": 33.4,
+    "heapMiB": 128
+  },
+  "simulation": {
+    "steps": 60000,
+    "meanMs": 0.005513333333532061,
+    "p95BatchAverageMs": 0.0066666667660077415,
+    "tick": 60000
+  },
+  "frames": {
+    "samples": 179,
+    "medianMs": 16.699999999999818,
+    "p95Ms": 16.700000000000273
+  },
+  "heap": {
+    "beforeMiB": 12.324386596679688,
+    "afterMiB": 13.116710662841797
+  },
+  "limitations": "Local diagnostic, not a cross-device performance guarantee. Frame timing includes browser scheduling; heap includes Phaser and development runtime."
+}

@@ -22,10 +22,10 @@ describe('STOP domain', () => {
     expect(result.violation?.roadObjectId).toBe('any-road');
     expect(result.episode.phase).toBe('crossed');
   });
-  it('accepts a complete stop before the line without arbitrary waiting', () => {
-    const stop = checkStop(car(13), car(13, 0), line, ready(), 1);
+  it.each([13, 14.1, 15.1])('accepts a complete stop at y=%s within 3 m before the line', (y) => {
+    const stop = checkStop(car(y), car(y, 0), line, ready(), 1);
     expect(stop.episode.stopped).toBe(true);
-    const result = checkStop(car(13, 0), car(11), line, stop.episode, 2);
+    const result = checkStop(car(y, 0), car(11), line, stop.episode, 2);
     expect(result.violation).toBeUndefined();
     expect(result.passed).toBe(true);
   });
@@ -34,7 +34,7 @@ describe('STOP domain', () => {
     expect(checkStop(car(13), car(11), line, stop.episode, 2).violation).toBeDefined();
   });
   it('does not count a remote or post-line stop', () => {
-    for (const y of [17, 11]) {
+    for (const y of [15.11, 17, 11]) {
       expect(checkStop(car(y), car(y, 0), line, ready(), 1).episode.stopped).toBe(false);
     }
   });

@@ -1,6 +1,12 @@
-import { evaluateAnswer, selectQuestion, type Question } from '../../domain/learning/question';
+import { validateMap } from '../../domain/world/validate-map';
+import {
+  evaluateAnswer,
+  selectIncidentQuestion,
+  type Question,
+} from '../../domain/learning/question';
 import { STEP, stepWorld } from '../../domain/simulation/step';
 import {
+  type Trip,
   emptyControls,
   emptyHistory,
   initialWorld,
@@ -16,6 +22,8 @@ import {
 import type { HistoryRepository, LearningContentProvider, SessionEnvironment } from '../ports';
 export type PauseReason = 'manual' | 'blur' | 'incident' | 'journal';
 export interface SessionSnapshot {
+  completedTripId: string | null;
+  activeTripId: string | null;
   ready: boolean;
   started: boolean;
   world: World;
@@ -50,13 +58,15 @@ export class GameSession {
   private pendingWrites = 0;
   private snapshot!: SessionSnapshot;
   private question?: Question;
+  private questions: Question[] = [];
+  private completedTripId: string | null = null;
   constructor(
     readonly map: RoadMap,
     private repository: HistoryRepository,
     private content: LearningContentProvider,
     private environment: SessionEnvironment,
   ) {
-    this.world = initialWorld(map);
+    this.world = initialWorld(validateMap(map));
     this.publish();
   }
   async initialize() {
@@ -65,7 +75,12 @@ export class GameSession {
       this.content.getCandidates(),
     ]);
     if (history.status === 'fulfilled') {
-      this.history = history.value;
+      this.history = {
+        ...history.value,
+        trips: history.value.trips.map((t) =>
+          t.status === 'active' ? { ...t, status: 'interrupted' as const } : t,
+        ),
+      };
       this.loaded = true;
       this.storage = 'saved';
     } else {
@@ -74,7 +89,7 @@ export class GameSession {
         'Не удалось прочитать историю. Поездка доступна, новые результаты останутся в памяти.';
     }
     if (content.status === 'fulfilled') {
-      this.question = selectQuestion(content.value, 'stop');
+      this.questions = content.value;
     } else {
       this.notice += ' Учебный вопрос не загрузился. Доступны объяснение и продолжение поездки.';
     }
@@ -91,7 +106,10 @@ export class GameSession {
   getWorld = () => this.world;
   isRunning = () => this.started && this.pauses.size === 0;
   private publish() {
+    this.question = this.current?.material ?? undefined;
     this.snapshot = {
+      completedTripId: this.completedTripId,
+      activeTripId: this.started ? this.tripId : null,
       ready: this.ready,
       started: this.started,
       world: this.world,
@@ -111,6 +129,10 @@ export class GameSession {
     if (!this.ready) {
       return;
     }
+    if (this.started) {
+      this.endTrip('restarted');
+    }
+    this.completedTripId = null;
     this.world = initialWorld(this.map);
     this.controls = emptyControls();
     this.tripId = this.environment.id();
@@ -120,6 +142,14 @@ export class GameSession {
     this.answer = null;
     this.pauses.clear();
     this.started = true;
+    this.history = {
+      ...this.history,
+      trips: [
+        ...this.history.trips,
+        { id: this.tripId, startedAt: this.environment.date(), status: 'active' },
+      ],
+    };
+    this.persist();
     this.publish();
   }
   setControls(controls: Controls) {
@@ -171,16 +201,50 @@ export class GameSession {
     if (result.violations.length) {
       this.pauses.add('incident');
       this.clearInput();
-      for (const violation of result.violations) {
-        const entry: Violation = {
-          ...violation,
-          id: this.environment.id(),
-          tripId: this.tripId,
-          attemptId: this.attemptId,
-          date: this.environment.date(),
-          mapVersion: this.map.version,
-          rulesVersion: RULES_VERSION,
-        };
+      const eventKeys = result.violations.map((v) => `${v.type}:${v.roadObjectId}:${v.episode}`);
+      const existing = this.history.violations.find(
+        (v) => v.attemptId === this.attemptId && v.eventKeys?.some((k) => eventKeys.includes(k)),
+      );
+      const causes = [
+        ...(existing?.causes ?? []),
+        ...result.violations.flatMap((v) =>
+          v.causes.map((c) => ({
+            ...c,
+            facts: { ...c.facts, roadObjectId: v.roadObjectId, episode: v.episode },
+          })),
+        ),
+      ];
+      const uniqueCauses = causes.filter(
+        (c, i) =>
+          causes.findIndex(
+            (other) =>
+              other.code === c.code &&
+              other.facts.roadObjectId === c.facts.roadObjectId &&
+              other.facts.episode === c.facts.episode,
+          ) === i,
+      );
+      const incident = { ...result.violations[0], causes: uniqueCauses };
+      const selected = existing
+        ? existing.material
+        : selectIncidentQuestion(this.questions, incident, this.history.answers);
+      const entry: Violation = {
+        ...incident,
+        id: existing?.id ?? this.environment.id(),
+        tripId: this.tripId,
+        attemptId: this.attemptId,
+        date: existing?.date ?? this.environment.date(),
+        mapVersion: this.map.version,
+        rulesVersion: RULES_VERSION,
+        eventKeys: [...new Set([...(existing?.eventKeys ?? []), ...eventKeys])],
+        material: selected ? structuredClone(selected) : null,
+        ...(!selected
+          ? {
+              materialUnavailable:
+                'Подходящего материала для сочетания причин нет. Ниже доступны объяснения и ссылки на ПДД.',
+            }
+          : {}),
+      };
+      if (!existing) {
         const targetTick = this.world.tick - Math.round(5 / STEP);
         const checkpoint =
           [...this.snapshots].reverse().find((w) => w.tick <= targetTick) ?? this.snapshots[0];
@@ -190,10 +254,15 @@ export class GameSession {
         if (this.checkpoints.size > 20) {
           this.checkpoints.delete(this.checkpoints.keys().next().value!);
         }
-        this.history = { ...this.history, violations: [...this.history.violations, entry] };
-        this.current = entry;
-        this.answer = null;
       }
+      this.history = {
+        ...this.history,
+        violations: existing
+          ? this.history.violations.map((v) => (v.id === entry.id ? entry : v))
+          : [...this.history.violations, entry],
+      };
+      this.current = entry;
+      this.answer = null;
       this.persist();
       this.publish();
     } else if (this.world.tick % 6 === 0) {
@@ -201,6 +270,7 @@ export class GameSession {
     }
   }
   continueTrip() {
+    this.recordSkip();
     this.current = null;
     this.answer = null;
     this.pauses.delete('incident');
@@ -211,6 +281,10 @@ export class GameSession {
     return this.checkpoints.has(id);
   }
   retry() {
+    if (!this.started) {
+      return;
+    }
+    this.recordSkip();
     const checkpoint = this.current && this.checkpoints.get(this.current.id);
     if (!checkpoint) {
       this.notice = 'Точный повтор недоступен. Можно вернуться к началу улицы.';
@@ -228,7 +302,15 @@ export class GameSession {
     this.publish();
   }
   returnToRoad() {
-    this.world = initialWorld(this.map);
+    if (!this.started) {
+      this.start();
+      return;
+    }
+    this.recordSkip();
+    this.world = {
+      ...initialWorld(this.map),
+      successfulManeuvers: this.world.successfulManeuvers,
+    };
     this.attemptId = this.environment.id();
     this.snapshots = [structuredClone(this.world)];
     this.current = null;
@@ -288,7 +370,11 @@ export class GameSession {
     this.publish();
   }
   clearHistory() {
-    this.history = emptyHistory();
+    this.history = {
+      ...emptyHistory(),
+      trips: this.started ? this.history.trips.filter((t) => t.id === this.tripId) : [],
+    };
+    this.completedTripId = null;
     this.checkpoints.clear();
     this.current = null;
     this.answer = null;
@@ -298,12 +384,47 @@ export class GameSession {
     this.publish();
   }
   finish() {
+    this.recordSkip();
+    this.endTrip('finished');
+    this.completedTripId = this.tripId;
+    this.persist();
     this.started = false;
     this.clearInput();
     this.current = null;
     this.pauses.clear();
     this.pauses.add('journal');
     this.publish();
+  }
+  private recordSkip() {
+    if (
+      this.current &&
+      !this.answer &&
+      !this.history.answers.some((a) => a.violationId === this.current!.id) &&
+      !this.history.skips.some((s) => s.violationId === this.current!.id)
+    ) {
+      this.history = {
+        ...this.history,
+        skips: [
+          ...this.history.skips,
+          {
+            id: this.environment.id(),
+            violationId: this.current.id,
+            date: this.environment.date(),
+          },
+        ],
+      };
+      this.persist();
+    }
+  }
+  private endTrip(status: Trip['status']) {
+    this.history = {
+      ...this.history,
+      trips: this.history.trips.map((t) =>
+        t.id === this.tripId && t.status === 'active'
+          ? { ...t, status, finishedAt: this.environment.date() }
+          : t,
+      ),
+    };
   }
   private persist() {
     if (!this.loaded) {

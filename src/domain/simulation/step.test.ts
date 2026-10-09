@@ -7,7 +7,7 @@ it('is deterministic and accepts braking before STOP then continuing', () => {
   let a = initialWorld(neighborhood),
     b = initialWorld(neighborhood);
   const throttle = { ...emptyControls(), throttle: true };
-  for (let i = 0; i < 145; i++) {
+  for (let i = 0; i < 138; i++) {
     a = stepWorld(a, throttle, neighborhood).world;
     b = stepWorld(b, throttle, neighborhood).world;
   }
@@ -16,14 +16,14 @@ it('is deterministic and accepts braking before STOP then continuing', () => {
     a = stepWorld(a, { ...emptyControls(), brake: true }, neighborhood).world;
   }
   const distance = stopDistance(a.vehicle, neighborhood.stops[0]);
-  expect(distance).toBeGreaterThanOrEqual(0);
-  expect(distance).toBeLessThanOrEqual(1.5);
+  expect(distance).toBeGreaterThan(1.5);
+  expect(distance).toBeLessThanOrEqual(3);
   for (let i = 0; i < 120; i++) {
     const result = stepWorld(a, throttle, neighborhood);
     expect(result.violations).toHaveLength(0);
     a = result.world;
   }
-  expect(a.successfulStops).toBe(1);
+  expect(a.successfulManeuvers).toBe(1);
 });
 it('keeps the car on a road and stops at its boundary', () => {
   let world = initialWorld(neighborhood);

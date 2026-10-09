@@ -7,6 +7,7 @@ import {
   type StopViolation,
   type Vehicle,
 } from '../world/model';
+const STOP_APPROACH_DISTANCE = 3;
 const dot = (a: Point, b: Point) => a.x * b.x + a.y * b.y;
 const front = (v: Vehicle): Point => ({
   x: v.x + (Math.cos(v.heading) * VEHICLE_LENGTH) / 2,
@@ -16,7 +17,7 @@ export function stopDistance(v: Vehicle, line: StopLine) {
   const p = front(v);
   return dot({ x: line.a.x - p.x, y: line.a.y - p.y }, line.direction);
 }
-/** Technical tolerance: bumper within 1.5 m before the line, speed <= 0.03 m/s. No legal waiting period. */
+/** Technical tolerance: bumper within 3 m before the line, speed <= 0.03 m/s. No legal waiting period. */
 export function checkStop(
   previous: Vehicle,
   next: Vehicle,
@@ -42,7 +43,13 @@ export function checkStop(
   if (state.phase === 'crossed') {
     return { episode: state, passed: false };
   }
-  if (facing && within(front(next)) && after >= 0 && after <= 1.5 && Math.abs(next.speed) <= 0.03) {
+  if (
+    facing &&
+    within(front(next)) &&
+    after >= 0 &&
+    after <= STOP_APPROACH_DISTANCE &&
+    Math.abs(next.speed) <= 0.03
+  ) {
     state.stopped = true;
   }
   if (after > 4) {

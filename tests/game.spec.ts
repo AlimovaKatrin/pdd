@@ -16,7 +16,10 @@ test('STOP → optional answer → retry → history persists after reload', asy
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
   await start(page);
+  const maneuvers = page.locator('.stat-row').filter({ hasText: 'Правильных манёвров' });
+  await expect(maneuvers.locator('strong')).toHaveText('0');
   await violate(page);
+  await expect(maneuvers.locator('strong')).toHaveText('0');
   await expect(page.getByText('Авторский учебный вопрос · не официальный билет')).toBeVisible();
   await page.getByRole('button', { name: 'Повторить ситуацию' }).click();
   await expect(page.getByTestId('speed')).toHaveText('00');
@@ -129,6 +132,52 @@ for (const viewport of [
         await page.getByRole('button', { name: 'Поехать в город', exact: true }).click();
         await expect(page.locator('#road')).toBeFocused();
         await expectStableMap();
+        const guide = page.getByRole('region', { name: 'ЗНАКОМИМСЯ С ГОРОДОМ' });
+        const guideBefore = await guide.boundingBox();
+        const topicRows = await guide
+          .locator('.guide-topics button')
+          .evaluateAll((buttons) => buttons.map((button) => button.getBoundingClientRect().top));
+        expect(new Set(topicRows).size).toBe(1);
+        for (const [label, title, location] of [
+          ['STOP', 'Остановка перед STOP', 'Центральная улица'],
+          ['Скорость', 'Не быстрее 30 км/ч', 'Верхняя улица'],
+          ['Светофор', 'Дождитесь зелёного', 'Правая улица'],
+          ['Поворот', 'Покажите направление', 'На любом перекрёстке'],
+          ['Пешеход', 'Уступите пешеходу', 'Левая улица'],
+        ]) {
+          const topic = guide.getByRole('button', { name: label, exact: true });
+          await topic.focus();
+          await topic.press('Space');
+          await expect(topic).toBeFocused();
+          await expect(topic).toHaveAttribute('aria-pressed', 'true');
+          await expect(topic).toHaveCSS('background-color', 'rgb(36, 92, 70)');
+          await expect(guide.locator('[aria-pressed="true"]')).toHaveCount(1);
+          await expect(guide.getByRole('heading', { name: title })).toBeVisible();
+          await expect(guide.locator('.guide-location')).toContainText(location);
+          await expect(page.getByTestId('speed')).toHaveText('00');
+          expect(await guide.boundingBox()).toEqual(guideBefore);
+          expect(
+            await guide.evaluate((element) => {
+              const box = element.getBoundingClientRect();
+              return [...element.querySelectorAll('button, h2, p, .guide-footer')].every(
+                (child) => {
+                  const r = child.getBoundingClientRect();
+                  return (
+                    r.top >= box.top &&
+                    r.bottom <= box.bottom &&
+                    r.left >= box.left &&
+                    r.right <= box.right &&
+                    child.scrollWidth <= child.clientWidth + 1
+                  );
+                },
+              );
+            }),
+          ).toBe(true);
+          await expectStableMap();
+        }
+        if (viewport.width === 1440 || viewport.width === 700) {
+          await page.screenshot({ path: `test-results/guide-${viewport.width}.png` });
+        }
         const map = await page.locator('.map-card').boundingBox();
         const dashboard = await page.locator('.dashboard').boundingBox();
         expect(dashboard!.y).toBeGreaterThanOrEqual(map!.y + map!.height);

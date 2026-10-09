@@ -1,27 +1,26 @@
-import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { useEffect, useRef, useSyncExternalStore } from 'react';
 import {
   ArrowLeft,
   ArrowRight,
   ArrowUpRight,
   BookOpen,
-  Check,
-  ChevronRight,
   Compass,
   ChevronDown,
   Flag,
-  History,
   Leaf,
   MapPin,
   Pause,
   Play,
   RotateCcw,
   Route,
-  ShieldCheck,
   Square,
   X,
 } from 'lucide-react';
 import type { GameSession } from '../../use-cases/session/game-session';
-import { Modal } from './Modal';
+import { Incident } from './Incident';
+import { CityGuide } from './CityGuide';
+import { Journal } from './Journal';
+import { activeSpeedZone } from '../../domain/world/traffic';
 export function App({
   session,
   mountWorld,
@@ -31,7 +30,6 @@ export function App({
 }) {
   const state = useSyncExternalStore(session.subscribe, session.getSnapshot);
   const scene = useRef<HTMLDivElement>(null);
-  const [confirmClear, setConfirmClear] = useState(false);
   useEffect(() => {
     if (scene.current) {
       return mountWorld(scene.current);
@@ -40,12 +38,15 @@ export function App({
   const focusRoad = () => requestAnimationFrame(() => document.getElementById('road')?.focus());
   const act = (fn: () => void) => {
     fn();
-    focusRoad();
+    const next = session.getSnapshot();
+    if (!next.journal && !next.current) {
+      focusRoad();
+    }
   };
   const speed = Math.round(Math.abs(state.world.vehicle.speed) * 3.6);
   const paused = state.started && state.pauses.length > 0;
   const showPause = paused && !state.current && !state.journal;
-  const independent = state.history.answers.filter((a) => a.correct && !a.assisted).length;
+  const limit = activeSpeedZone(session.map, state.world.vehicle)?.limit;
   return (
     <div className="app">
       <header className="header">
@@ -78,7 +79,7 @@ export function App({
         </nav>
         <span className="prototype">
           <span />
-          Первый прототип
+          MVP · предпросмотр
         </span>
       </header>
       <main>
@@ -117,16 +118,6 @@ export function App({
                 <span />
                 20 м
               </span>
-              {showPause && (
-                <div className="pause-card">
-                  <Pause size={25} />
-                  <h2>Небольшая остановка</h2>
-                  <p>Город подождёт. Продолжайте, когда будете готовы.</p>
-                  <button className="primary" onClick={() => act(() => session.resume())}>
-                    Продолжить поездку <Play size={16} />
-                  </button>
-                </div>
-              )}
             </section>
             <div className="dashboard" inert={!state.started} aria-hidden={!state.started}>
               <div className="speed">
@@ -153,6 +144,9 @@ export function App({
                   <kbd>E</kbd>
                 </button>
               </div>
+              <span className="speed-limit" aria-label="Ограничение скорости">
+                {limit ?? '—'}
+              </span>
               <span className="drive-state">
                 <span className={paused ? 'dot amber' : 'dot'} />
                 {paused ? 'Пауза' : state.world.vehicle.speed < 0 ? 'Задний ход' : 'В пути'}
@@ -186,38 +180,7 @@ export function App({
             </div>
           </div>
           <aside className="sidebar">
-            <section className="lesson-card">
-              <div className="eyebrow">
-                <span className="small-line" />
-                ЗНАКОМИМСЯ С ГОРОДОМ
-              </div>
-              <div className="lesson-heading">
-                <h2>
-                  Свобода ехать.
-                  <br />
-                  Возможность понять.
-                </h2>
-                <span className="stop-sign">STOP</span>
-              </div>
-              <p>
-                Здесь нет таймера и оценки. Каждая ошибка — повод разобраться и попробовать ещё раз.
-              </p>
-              <div className="lesson-divider" />
-              <div className="current-lesson">
-                <span className="lesson-index">01</span>
-                <div>
-                  <strong>Остановка перед STOP</strong>
-                  <span>Первый дорожный сценарий</span>
-                </div>
-              </div>
-              <p className="lesson-hint">
-                Полностью остановитесь перед белой линией. Затем продолжайте поездку.
-              </p>
-              <span className="scope-pill">
-                <ShieldCheck size={14} />
-                Сейчас проверяем только STOP
-              </span>
-            </section>
+            <CityGuide />
             <details className="controls-card">
               <summary className="section-heading controls-toggle">
                 <h3>Всё под рукой</h3>
@@ -273,12 +236,14 @@ export function App({
                 <h3>Опыт этой поездки</h3>
               </div>
               <div className="stat-row">
-                <span>Правильных остановок</span>
-                <strong>{state.world.successfulStops}</strong>
+                <span>Правильных манёвров</span>
+                <strong>{state.world.successfulManeuvers}</strong>
               </div>
               <div className="stat-row">
                 <span>Ситуаций в журнале</span>
-                <strong>{state.history.violations.length}</strong>
+                <strong>
+                  {state.history.violations.filter((v) => v.tripId === state.activeTripId).length}
+                </strong>
               </div>
               <button className="text-button" onClick={() => session.openJournal()}>
                 Открыть журнал <ArrowRight size={15} />
@@ -297,12 +262,27 @@ export function App({
           </span>
           <span>Учебный прототип · ПДД РФ, категория B</span>
         </footer>
+        {state.world.advisories.length > 0 && (
+          <p className="notice" role="status">
+            {state.world.advisories[0]}
+          </p>
+        )}
         {state.notice && (
           <p className="notice" role="status">
             {state.notice}
           </p>
         )}
       </main>
+      {showPause && (
+        <div className="pause-card">
+          <Pause size={25} />
+          <h2>Небольшая остановка</h2>
+          <p>Город подождёт. Продолжайте, когда будете готовы.</p>
+          <button className="primary" onClick={() => act(() => session.resume())}>
+            Продолжить поездку <Play size={16} />
+          </button>
+        </div>
+      )}
       {!state.started && (
         <div className="welcome">
           <span className="welcome-icon">
@@ -325,214 +305,10 @@ export function App({
           <span className="desktop-note">Для компьютера · управление с клавиатуры</span>
         </div>
       )}
-      {state.current ? (
-        <Modal
-          key="incident"
-          className="incident-modal"
-          title="Разбор нарушения"
-          onClose={() => act(() => session.continueTrip())}
-        >
-          <header className="incident-header">
-            <div className="modal-kicker">
-              <span className="stop-sign small">STOP</span>РАЗБЕРЁМСЯ ВМЕСТЕ
-            </div>
-            <h2>Здесь нужна остановка</h2>
-            <p className="modal-lead">
-              Машина пересекла стоп-линию без полной остановки перед ней.
-            </p>
-          </header>
-          <div className="incident-grid">
-            <section className="incident-context" aria-label="Обстоятельства и объяснение">
-              <div className="evidence">
-                <span>Скорость при пересечении</span>
-                <strong>{(state.current.speed * 3.6).toFixed(1)} км/ч</strong>
-              </div>
-              {state.question ? (
-                <>
-                  {state.revealed ? (
-                    <div className="explanation">
-                      <strong>Почему так</strong>
-                      <p>{state.question.explanation}</p>
-                    </div>
-                  ) : (
-                    <button className="text-button reveal-answer" onClick={() => session.reveal()}>
-                      Показать разбор <ChevronRight size={15} />
-                    </button>
-                  )}
-                  <a
-                    className="source-link"
-                    href={state.question.reference.url}
-                    target="_blank"
-                    rel="noreferrer"
-                    onClick={() => session.reveal()}
-                  >
-                    {state.question.reference.label}
-                    <ArrowUpRight size={14} />
-                  </a>
-                  <p className="source-note">{state.question.reference.verification}</p>
-                </>
-              ) : (
-                <p>Необходимо полностью остановиться перед стоп-линией.</p>
-              )}
-            </section>
-            <section className="incident-question" aria-label="Учебный вопрос">
-              <div className="demo-label">Авторский учебный вопрос · не официальный билет</div>
-              {state.question ? (
-                <>
-                  <h3 className="question-title">{state.question.title}</h3>
-                  <div className="answers">
-                    {state.question.options.map((option, i) => (
-                      <button
-                        key={option}
-                        disabled={!!state.answer}
-                        className={`answer-option ${state.answer?.answer === i ? (state.answer.correct ? 'correct' : 'wrong') : ''} ${state.revealed && state.question?.correctIndex === i ? 'correct' : ''}`}
-                        onClick={() => session.answerQuestion(i)}
-                      >
-                        <span>
-                          {state.revealed && state.question?.correctIndex === i ? (
-                            <Check size={15} />
-                          ) : (
-                            i + 1
-                          )}
-                        </span>
-                        {option}
-                      </button>
-                    ))}
-                  </div>
-                  {state.answer && (
-                    <p role="status" className="answer-result">
-                      {state.answer.correct ? 'Верно.' : 'Попробуем разобраться.'}{' '}
-                      {state.answer.assisted
-                        ? 'Ответ с помощью.'
-                        : 'Самостоятельный ответ сохранён.'}{' '}
-                      Нарушение осталось в журнале.
-                    </p>
-                  )}
-                </>
-              ) : (
-                <p>Подходящий вопрос пока не добавлен. Можно продолжить поездку.</p>
-              )}
-            </section>
-          </div>
-          <div className="modal-actions">
-            <button
-              className="secondary"
-              onClick={() =>
-                act(() =>
-                  session.canRetry(state.current!.id) ? session.retry() : session.returnToRoad(),
-                )
-              }
-            >
-              <RotateCcw size={16} />
-              {session.canRetry(state.current.id) ? 'Повторить ситуацию' : 'На начало улицы'}
-            </button>
-            <button className="primary" onClick={() => act(() => session.continueTrip())}>
-              Продолжить <ArrowRight size={16} />
-            </button>
-          </div>
-          {!session.canRetry(state.current.id) && (
-            <p className="source-note">
-              Точное состояние этой ситуации недоступно. Возврат начнёт поездку с безопасного места.
-            </p>
-          )}
-        </Modal>
-      ) : state.journal ? (
-        <Modal
-          key="journal"
-          title="Журнал поездок"
-          wide
-          onClose={() => act(() => session.closeJournal())}
-        >
-          <div className="modal-kicker">
-            <History size={18} />
-            ВАШ ОПЫТ
-          </div>
-          <h2>Журнал поездок</h2>
-          <p className="modal-lead">Ошибки остаются здесь, чтобы к ним можно было вернуться.</p>
-          <div className="journal-stats">
-            <div>
-              <strong>{state.history.violations.length}</strong>
-              <span>нарушений</span>
-            </div>
-            <div>
-              <strong>{state.history.answers.length}</strong>
-              <span>ответов</span>
-            </div>
-            <div>
-              <strong>{independent}</strong>
-              <span>верных без помощи</span>
-            </div>
-          </div>
-          {!state.history.violations.length ? (
-            <div className="empty-state">
-              <BookOpen size={34} />
-              <h3>Пока чистый лист</h3>
-              <p>После первой дорожной ситуации здесь появится её разбор.</p>
-            </div>
-          ) : (
-            <div className="journal-list">
-              {[...state.history.violations].reverse().map((v) => {
-                const attempts = state.history.answers.filter((a) => a.violationId === v.id);
-                return (
-                  <button key={v.id} onClick={() => session.review(v.id)}>
-                    <span className="stop-sign small">STOP</span>
-                    <span>
-                      <strong>Проезд без остановки</strong>
-                      <small>
-                        {new Date(v.date).toLocaleString('ru-RU', {
-                          day: 'numeric',
-                          month: 'short',
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })}{' '}
-                        · {attempts.length ? `${attempts.length} ответ(а)` : 'Без ответа'}
-                      </small>
-                    </span>
-                    <ChevronRight size={18} />
-                  </button>
-                );
-              })}
-            </div>
-          )}
-          <div className="modal-actions">
-            <button
-              className="secondary"
-              onClick={() =>
-                act(() => {
-                  session.closeJournal();
-                  if (!state.started) {
-                    session.start();
-                  }
-                })
-              }
-            >
-              <Play size={16} />К поездке
-            </button>
-            {state.history.violations.length > 0 && (
-              <button className="text-button danger" onClick={() => setConfirmClear(true)}>
-                Очистить историю
-              </button>
-            )}
-          </div>
-          {confirmClear && (
-            <div className="confirm-clear">
-              <p>Удалить нарушения и ответы из этого браузера?</p>
-              <button className="secondary" onClick={() => setConfirmClear(false)}>
-                Отмена
-              </button>
-              <button
-                className="secondary danger"
-                onClick={() => {
-                  session.clearHistory();
-                  setConfirmClear(false);
-                }}
-              >
-                Да, удалить
-              </button>
-            </div>
-          )}
-        </Modal>
-      ) : null}
+      {state.current && (
+        <Incident key={state.current.id} state={state} session={session} act={act} />
+      )}
+      {state.journal && <Journal state={state} session={session} act={act} />}
       <div className="mobile-banner">
         <X size={16} />
         Для управления нужен компьютер с клавиатурой.
