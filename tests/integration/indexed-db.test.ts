@@ -1,11 +1,15 @@
 import 'fake-indexeddb/auto';
-import { cause } from '../../domain/violations/causes';
+import { cause } from '../../src/domain/violations/causes';
 import { expect, it } from 'vitest';
-import { IndexedDbHistory, validateHistory } from './indexed-db';
-import { emptyHistory, type History } from '../../domain/world/model';
+import { IndexedDbHistory } from '../../src/adapters/persistence/indexed-db';
+import { validateHistory } from '../../src/adapters/persistence/history-validation';
+import { emptyHistory, type History } from '../../src/domain/world/model';
+
 it('round-trips history and replaces the snapshot without duplicates', async () => {
   const repository = new IndexedDbHistory('test-history');
+
   expect(await repository.load()).toEqual(emptyHistory());
+
   const history: History = {
     ...emptyHistory(),
     trips: [{ id: 'trip', startedAt: '2026-10-09', status: 'finished' }],
@@ -27,6 +31,7 @@ it('round-trips history and replaces the snapshot without duplicates', async () 
       },
     ],
   };
+
   await repository.save(history);
   await repository.save(history);
   expect(await repository.load()).toEqual(history);
@@ -52,6 +57,7 @@ it('migrates v1 without changing answers, assistance or the unanswered demo mate
     mapVersion: 'neighborhood-1',
     rulesVersion: 'stop-1',
   };
+
   const answer = {
     id: 'answer',
     violationId: 'old',
@@ -62,12 +68,14 @@ it('migrates v1 without changing answers, assistance or the unanswered demo mate
     assisted: true,
     date: '2026-10-08',
   };
+
   const migrated = validateHistory({
     schemaVersion: 1,
     violations: [record, { ...record, id: 'unanswered' }],
     answers: [answer],
     revealed: ['old'],
   });
+
   expect(migrated.schemaVersion).toBe(2);
   expect(migrated.answers).toEqual([answer]);
   expect(migrated.revealed).toEqual(['old']);
@@ -79,15 +87,19 @@ it('migrates v1 without changing answers, assistance or the unanswered demo mate
     ),
   ).toBe(true);
   expect(migrated.trips[0].status).toBe('legacy');
+
   const repository = new IndexedDbHistory('migration');
+
   await repository.save(migrated);
   expect(await repository.load()).toEqual(migrated);
+
   const unknown = validateHistory({
     schemaVersion: 1,
     violations: [record],
     answers: [{ ...answer, contentVersion: 'missing' }],
     revealed: [],
   });
+
   expect(unknown.violations[0].material).toBeNull();
   expect(unknown.violations[0].materialUnavailable).toBeTruthy();
 });

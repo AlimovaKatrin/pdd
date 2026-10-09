@@ -1,6 +1,8 @@
 import type { Point, RoadMap, StopLine } from './model';
+
 export function validateMap(map: RoadMap): RoadMap {
   const positive = (n: number) => Number.isFinite(n) && n > 0;
+
   const point = (p: Point) =>
     Number.isFinite(p.x) &&
     Number.isFinite(p.y) &&
@@ -8,13 +10,16 @@ export function validateMap(map: RoadMap): RoadMap {
     p.y >= 0 &&
     p.x <= map.width &&
     p.y <= map.height;
+
   const direction = (p: Point) => Math.abs(Math.hypot(p.x, p.y) - 1) < 1e-6;
+
   const line = (s: StopLine) =>
     point(s.a) &&
     point(s.b) &&
     direction(s.direction) &&
     Math.hypot(s.a.x - s.b.x, s.a.y - s.b.y) > 0 &&
     Math.abs((s.b.x - s.a.x) * s.direction.x + (s.b.y - s.a.y) * s.direction.y) < 1e-6;
+
   const all = [
     ...map.stops,
     ...(map.speedZones ?? []),
@@ -22,6 +27,7 @@ export function validateMap(map: RoadMap): RoadMap {
     ...(map.crossings ?? []),
     ...(map.intersections ?? []),
   ];
+
   if (
     !map.version ||
     !positive(map.width) ||
@@ -42,6 +48,7 @@ export function validateMap(map: RoadMap): RoadMap {
   ) {
     throw new Error('Invalid map geometry');
   }
+
   if (
     !(map.speedZones ?? []).every(
       (z) =>
@@ -79,5 +86,6 @@ export function validateMap(map: RoadMap): RoadMap {
   ) {
     throw new Error('Invalid traffic configuration');
   }
+
   return map;
 }

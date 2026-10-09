@@ -1,80 +1,106 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { GameSession } from './game-session';
-import { neighborhood } from '../../content/maps/neighborhood';
-import { localContent } from '../../adapters/content/local';
-import { emptyControls, emptyHistory, type History } from '../../domain/world/model';
-import type { HistoryRepository } from '../ports';
+import { GameSession } from '../../src/use-cases/session/game-session';
+import { neighborhood } from '../../src/content/maps/neighborhood';
+import { localContent } from '../../src/adapters/content/local';
+import { emptyControls, emptyHistory, type History } from '../../src/domain/world/model';
+import type { HistoryRepository } from '../../src/use-cases/ports';
+
 let counter = 0;
+
 class MemoryHistory implements HistoryRepository {
   history: History = emptyHistory();
+
   fail = false;
+
   async load() {
     return structuredClone(this.history);
   }
+
   async save(history: History) {
     if (this.fail) {
       throw new Error('quota');
     }
+
     this.history = structuredClone(history);
   }
 }
+
 function create(repository: HistoryRepository = new MemoryHistory()) {
   return new GameSession(neighborhood, repository, localContent, {
     id: () => String(++counter),
     date: () => '2026-10-09T12:00:00Z',
   });
 }
+
 function driveToViolation(s: GameSession) {
   s.setControls({ ...emptyControls(), throttle: true });
+
   for (let i = 0; i < 600 && !s.getSnapshot().current; i++) {
     s.step();
   }
+
   expect(s.getSnapshot().current).not.toBeNull();
 }
+
 beforeEach(() => {
   counter = 0;
 });
 describe('game session', () => {
   it('publishes completed maneuvers, preserves them on safe return and clears them for a new trip', async () => {
     const s = create();
+
     await s.initialize();
     s.start();
     s.setControls({ ...emptyControls(), throttle: true });
+
     for (let i = 0; i < 138; i++) {
       s.step();
     }
+
     s.setControls({ ...emptyControls(), brake: true });
+
     while (s.getWorld().vehicle.speed > 0) {
       s.step();
     }
+
     s.setControls({ ...emptyControls(), throttle: true });
+
     for (let i = 0; i < 120; i++) {
       s.step();
     }
-    expect(s.getSnapshot().world.successfulManeuvers).toBe(1);
+
+    expect(s.getSnapshot().driving.successfulManeuvers).toBe(1);
     s.pause('manual');
+
     for (let i = 0; i < 60; i++) {
       s.step();
     }
-    expect(s.getSnapshot().world.successfulManeuvers).toBe(1);
+
+    expect(s.getSnapshot().driving.successfulManeuvers).toBe(1);
     s.returnToRoad();
-    expect(s.getSnapshot().world.successfulManeuvers).toBe(1);
+    expect(s.getSnapshot().driving.successfulManeuvers).toBe(1);
     s.start();
-    expect(s.getSnapshot().world.successfulManeuvers).toBe(0);
+    expect(s.getSnapshot().driving.successfulManeuvers).toBe(0);
   });
   it('records an incident, pauses, continues without answering and does not duplicate', async () => {
-    const repository = new MemoryHistory(),
-      s = create(repository);
+    const repository = new MemoryHistory();
+
+    const s = create(repository);
+
     await s.initialize();
     s.start();
     driveToViolation(s);
+
     const tick = s.getWorld().tick;
+
     s.step();
     expect(s.getWorld().tick).toBe(tick);
     s.continueTrip();
+
     for (let i = 0; i < 30; i++) {
       s.step();
     }
+
     await s.flushPersistence();
     expect(s.getSnapshot().history.violations).toHaveLength(1);
     expect(s.getSnapshot().history.answers).toHaveLength(0);
@@ -82,10 +108,13 @@ describe('game session', () => {
   });
   it('restores the world and rule states while keeping immutable history', async () => {
     const s = create();
+
     await s.initialize();
     s.start();
     driveToViolation(s);
+
     const id = s.getSnapshot().current!.id;
+
     s.answerQuestion(0);
     s.retry();
     expect(s.getWorld().tick).toBe(0);
@@ -99,6 +128,7 @@ describe('game session', () => {
   });
   it('retains other pause reasons when the card closes and clears held input', async () => {
     const s = create();
+
     await s.initialize();
     s.start();
     driveToViolation(s);
@@ -106,27 +136,63 @@ describe('game session', () => {
     s.continueTrip();
     expect(s.isRunning()).toBe(false);
     s.resume();
+
     const speed = s.getWorld().vehicle.speed;
+
     s.step();
     expect(s.getWorld().vehicle.speed).toBeLessThan(speed);
   });
+  it.each(['retry', 'returnToRoad'] as const)(
+    '%s closes the incident and journal while retaining manual and focus pauses',
+    async (action) => {
+      const session = create();
+
+      await session.initialize();
+      session.start();
+      driveToViolation(session);
+
+      const violationId = session.getSnapshot().current!.id;
+
+      session.openJournal();
+      session.pause('manual');
+      session.pause('blur');
+
+      session[action]();
+
+      expect(session.getSnapshot().current).toBeNull();
+      expect(session.getSnapshot().journal).toBe(false);
+      expect(session.getSnapshot().pauses).toEqual(['manual', 'blur']);
+      expect(session.getSnapshot().history.violations).toHaveLength(1);
+      expect(session.getSnapshot().history.skips[0].violationId).toBe(violationId);
+      expect(session.isRunning()).toBe(false);
+      session.resume();
+      session.step();
+      expect(session.getWorld().vehicle.speed).toBe(0);
+    },
+  );
   it('persists assistance, keeps attempts and never cancels the violation', async () => {
-    const repository = new MemoryHistory(),
-      s = create(repository);
+    const repository = new MemoryHistory();
+
+    const s = create(repository);
+
     await s.initialize();
     s.start();
     driveToViolation(s);
     s.reveal();
     s.answerQuestion(1);
     s.answerQuestion(0); // double click must not duplicate
+
     const violationId = s.getSnapshot().current!.id;
+
     s.continueTrip();
     s.review(violationId);
     s.answerQuestion(0);
     await s.flushPersistence();
     expect(repository.history.answers).toHaveLength(2);
     expect(repository.history.answers.every((a) => a.assisted)).toBe(true);
+
     const next = create(repository);
+
     await next.initialize();
     next.review(violationId);
     expect(next.getSnapshot().revealed).toBe(true);
@@ -135,8 +201,11 @@ describe('game session', () => {
   });
   it('keeps driving if saving fails', async () => {
     const repository = new MemoryHistory();
+
     repository.fail = true;
+
     const s = create(repository);
+
     await s.initialize();
     s.start();
     driveToViolation(s);
@@ -147,6 +216,7 @@ describe('game session', () => {
   });
   it('does not overwrite unreadable historical data', async () => {
     let saves = 0;
+
     const s = create({
       load: async () => {
         throw new Error('corrupt');
@@ -155,6 +225,7 @@ describe('game session', () => {
         saves++;
       },
     });
+
     await s.initialize();
     s.start();
     driveToViolation(s);
@@ -164,6 +235,7 @@ describe('game session', () => {
   });
   it('does not interpret safe relocation as crossing the line', async () => {
     const s = create();
+
     await s.initialize();
     s.start();
     driveToViolation(s);
@@ -175,26 +247,34 @@ describe('game session', () => {
 });
 it('keeps saving status until all queued snapshots are persisted', async () => {
   const releases: Array<() => void> = [];
+
   const s = create({
     load: async () => emptyHistory(),
     save: () => new Promise<void>((resolve) => releases.push(resolve)),
   });
+
   await s.initialize();
   s.start();
   driveToViolation(s);
   s.reveal();
+
   while (!releases.length) {
     await Promise.resolve();
   }
+
   releases.shift()!();
+
   while (!releases.length) {
     await Promise.resolve();
   }
+
   expect(s.getSnapshot().storage).toBe('saving');
   releases.shift()!();
+
   while (!releases.length) {
     await Promise.resolve();
   }
+
   expect(s.getSnapshot().storage).toBe('saving');
   releases.shift()!();
   await s.flushPersistence();
@@ -211,6 +291,7 @@ it('allows the incident loop when the content provider fails', async () => {
     },
     { id: () => String(++counter), date: () => '2026-10-09' },
   );
+
   await s.initialize();
   s.start();
   driveToViolation(s);
@@ -219,21 +300,28 @@ it('allows the incident loop when the content provider fails', async () => {
   expect(s.isRunning()).toBe(true);
 });
 it('pins even an unanswered question and keeps a skip after a subsequent answer', async () => {
-  const repository = new MemoryHistory(),
-    s = create(repository);
+  const repository = new MemoryHistory();
+
+  const s = create(repository);
+
   await s.initialize();
   s.start();
   driveToViolation(s);
+
   const original = structuredClone(s.getSnapshot().question);
+
   const id = s.getSnapshot().current!.id;
+
   s.continueTrip();
   await s.flushPersistence();
+
   const newer = new GameSession(
     neighborhood,
     repository,
     { getCandidates: async () => [] },
     { id: () => String(++counter), date: () => '2026-10-09' },
   );
+
   await newer.initialize();
   newer.openJournal();
   newer.review(id);
@@ -248,8 +336,10 @@ it('pins even an unanswered question and keeps a skip after a subsequent answer'
   expect(newer.getSnapshot().started).toBe(false);
 });
 it('persists clean trips, restart/finish results and interrupted trips', async () => {
-  const repository = new MemoryHistory(),
-    s = create(repository);
+  const repository = new MemoryHistory();
+
+  const s = create(repository);
+
   await s.initialize();
   s.start();
   s.start();
@@ -260,7 +350,9 @@ it('persists clean trips, restart/finish results and interrupted trips', async (
   expect(s.getSnapshot().completedTripId).toBe(repository.history.trips[1].id);
   s.start();
   await s.flushPersistence();
+
   const next = create(repository);
+
   await next.initialize();
   expect(next.getSnapshot().history.trips.at(-1)?.status).toBe('interrupted');
 });
@@ -281,32 +373,43 @@ it('groups simultaneous rules, keeps all causes and allows fallback without a mi
       },
     ],
   };
+
   const s = new GameSession(custom, new MemoryHistory(), localContent, {
     id: () => String(++counter),
     date: () => '2026-10-09',
   });
+
   await s.initialize();
   s.start();
   driveToViolation(s);
   expect(s.getSnapshot().current!.causes.map((c) => c.rule)).toEqual(['stop', 'speed']);
   expect(s.getSnapshot().question).toBeUndefined();
   expect(s.getSnapshot().history.violations).toHaveLength(1);
+
   const before = structuredClone(s.getWorld());
+
   s.step();
   expect(s.getWorld()).toEqual(before);
   s.continueTrip();
+
   for (let i = 0; i < 30; i++) {
     s.step();
   }
+
   expect(s.getSnapshot().history.violations).toHaveLength(1);
 });
 it('restores all world actors and does not mutate prior snapshots', async () => {
   const s = create();
+
   await s.initialize();
   s.start();
+
   const initial = structuredClone(s.getWorld());
+
   driveToViolation(s);
+
   const frozen = structuredClone(s.getWorld());
+
   s.pause('manual');
   s.step();
   expect(s.getWorld()).toEqual(frozen);
@@ -319,6 +422,7 @@ it('restores all world actors and does not mutate prior snapshots', async () => 
 });
 it('keeps the active trip record when clearing history during a trip', async () => {
   const s = create();
+
   await s.initialize();
   s.start();
   driveToViolation(s);
@@ -329,19 +433,26 @@ it('keeps the active trip record when clearing history during a trip', async () 
 });
 it('appends later indicator causes to the same maneuver incident', async () => {
   const custom = { ...neighborhood, stops: [], spawn: { x: 67.5, y: 55, heading: -Math.PI / 2 } };
+
   const s = new GameSession(custom, new MemoryHistory(), localContent, {
     id: () => String(++counter),
     date: () => '2026-10-09',
   });
+
   await s.initialize();
   s.start();
   s.setControls({ ...emptyControls(), throttle: true, steer: -1 });
+
   for (let i = 0; i < 300 && !s.getSnapshot().current; i++) {
     s.step();
   }
+
   expect(s.getSnapshot().current?.causes[0].code).toBe('missing-indicator');
-  const id = s.getSnapshot().current!.id,
-    material = structuredClone(s.getSnapshot().current!.material);
+
+  const id = s.getSnapshot().current!.id;
+
+  const material = structuredClone(s.getSnapshot().current!.material);
+
   s.continueTrip();
   s.toggleIndicator('left');
   s.step();
@@ -363,17 +474,21 @@ it.each(['speed', 'signal', 'pedestrian'] as const)(
         : rule === 'signal'
           ? { x: 107.5, y: 72, heading: -Math.PI / 2 }
           : { x: 20.5, y: 61, heading: Math.PI / 2 };
+
     const custom = {
       ...neighborhood,
       spawn,
       stops: [],
       signals: neighborhood.signals!.map((s) => ({ ...s, offset: 800 })),
     };
-    const repository = new MemoryHistory(),
-      s = new GameSession(custom, repository, localContent, {
-        id: () => String(++counter),
-        date: () => '2026-10-09',
-      });
+
+    const repository = new MemoryHistory();
+
+    const s = new GameSession(custom, repository, localContent, {
+      id: () => String(++counter),
+      date: () => '2026-10-09',
+    });
+
     await s.initialize();
     s.start();
     driveToViolation(s);
@@ -386,3 +501,42 @@ it.each(['speed', 'signal', 'pedestrian'] as const)(
     expect(repository.history.violations).toHaveLength(1);
   },
 );
+
+it('exposes stable immutable snapshots without allowing changes to the session world or history', async () => {
+  const session = create();
+
+  await session.initialize();
+  session.start();
+
+  const initialWorld = session.getWorld();
+
+  const initialSnapshot = session.getSnapshot();
+
+  expect(session.getWorld()).toBe(initialWorld);
+  expect(session.getSnapshot()).toBe(initialSnapshot);
+  expect(Reflect.set(initialWorld.vehicle, 'speed', 999)).toBe(false);
+  expect(Reflect.set(initialSnapshot.history.trips[0], 'status', 'finished')).toBe(false);
+  expect(Reflect.set(initialSnapshot.history.violations, '0', {})).toBe(false);
+  expect(Reflect.set(session.map.spawn, 'x', 999)).toBe(false);
+  expect(initialSnapshot).not.toHaveProperty('world');
+
+  session.setControls({ ...emptyControls(), throttle: true });
+  session.step();
+
+  expect(session.getWorld().vehicle.speed).toBeGreaterThan(0);
+  expect(initialWorld.vehicle.speed).toBe(0);
+  expect(initialSnapshot.driving.speedKmh).toBe(0);
+  expect(session.getWorld()).not.toBe(initialWorld);
+  expect(session.getSnapshot().history.trips[0].status).toBe('active');
+  expect(session.getSnapshot().history.violations).toHaveLength(0);
+
+  driveToViolation(session);
+
+  const incidentSnapshot = session.getSnapshot();
+
+  expect(Reflect.set(incidentSnapshot.current!.causes[0].facts, 'speedKmh', 999)).toBe(false);
+  expect(Reflect.set(incidentSnapshot.question!.options, '0', 'changed')).toBe(false);
+  session.answerQuestion(0);
+  expect(incidentSnapshot.history.answers).toHaveLength(0);
+  expect(session.getSnapshot().history.answers).toHaveLength(1);
+});

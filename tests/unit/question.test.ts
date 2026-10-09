@@ -1,10 +1,16 @@
 import { expect, it } from 'vitest';
-import { stopQuestion } from '../../content/questions/stop';
-import { trafficQuestions } from '../../content/questions/traffic';
-import { selectQuestion, validateQuestion } from './question';
-import type { AnswerAttempt } from '../world/model';
+import { stopQuestion } from '../../src/content/questions/stop';
+import { trafficQuestions } from '../../src/content/questions/traffic';
+import {
+  questionCoversCauses,
+  selectQuestion,
+  validateQuestion,
+} from '../../src/domain/learning/question';
+import type { AnswerAttempt } from '../../src/domain/world/model';
+
 it('validates metadata and refuses unverified official or remote image content', () => {
   expect(validateQuestion(stopQuestion)).toBe(stopQuestion);
+
   for (const q of [
     null,
     {},
@@ -22,6 +28,7 @@ it('validates metadata and refuses unverified official or remote image content',
 });
 it('matches every cause and prefers unseen, then previously wrong materials', () => {
   const questions = ['a', 'b', 'c'].map((id) => ({ ...stopQuestion, id }));
+
   const answers: AnswerAttempt[] = [
     {
       id: '1',
@@ -44,6 +51,7 @@ it('matches every cause and prefers unseen, then previously wrong materials', ()
       date: '2026-10-09',
     },
   ];
+
   expect(selectQuestion(questions, 'stop', ['stop-line'], answers)?.id).toBe('c');
   expect(selectQuestion(questions.slice(0, 2), 'stop', ['stop-line'], answers)?.id).toBe('b');
   expect(
@@ -58,4 +66,19 @@ it('matches every cause and prefers unseen, then previously wrong materials', ()
     selectQuestion(trafficQuestions, 'indicator', ['missing-indicator', 'early-indicator-off'])
       ?.context,
   ).toBe('related');
+});
+
+it('uses the same cause coverage for selection and pinned material, including legacy STOP', () => {
+  expect(questionCoversCauses({}, ['stop-line'])).toBe(true);
+  expect(questionCoversCauses({}, ['stop-line', 'speed-limit'])).toBe(false);
+  expect(questionCoversCauses({ matches: [] }, ['stop-line'])).toBe(false);
+  expect(
+    questionCoversCauses({ matches: ['missing-indicator', 'late-indicator'] }, ['late-indicator']),
+  ).toBe(true);
+  expect(
+    questionCoversCauses({ matches: ['missing-indicator'] }, [
+      'missing-indicator',
+      'late-indicator',
+    ]),
+  ).toBe(false);
 });

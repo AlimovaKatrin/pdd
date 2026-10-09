@@ -1,4 +1,5 @@
 import type { Question } from '../../domain/learning/question';
+
 export const archivedStopQuestion: Question = {
   id: 'demo-stop-line',
   version: 'demo-1',

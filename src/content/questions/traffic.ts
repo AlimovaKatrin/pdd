@@ -1,5 +1,6 @@
 import type { CauseCode, Question, RuleType } from '../../domain/learning/question';
 import { references } from '../rule-references/pdd';
+
 const entries: [RuleType, CauseCode[], string, string[], string][] = [
   [
     'speed',
@@ -46,6 +47,7 @@ const entries: [RuleType, CauseCode[], string, string[], string][] = [
     'Уступите пешеходу, переходящему дорогу или вступившему на проезжую часть. Его вынужденная остановка из-за вашей машины — помеха; одна лишь близость не доказывает нарушение.',
   ],
 ];
+
 export const trafficQuestions: Question[] = entries.map(
   ([rule, matches, title, options, explanation]) => ({
     id: `author-${rule}`,

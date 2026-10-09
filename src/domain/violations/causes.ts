@@ -1,5 +1,6 @@
 import type { CauseCode, RuleType } from '../learning/question';
 import type { Cause } from '../world/model';
+
 const descriptions: Record<CauseCode, [RuleType, string, string, string]> = {
   'stop-line': [
     'stop',
@@ -50,8 +51,10 @@ const descriptions: Record<CauseCode, [RuleType, string, string, string]> = {
     'Пункты 1.2, 14.1',
   ],
 };
+
 export function cause(code: CauseCode, facts: Cause['facts']): Cause {
   const [rule, title, explanation, reference] = descriptions[code];
+
   const links: Record<RuleType, string> = {
     stop: 'f813c443e749db7b760a9fb7729a4e4ccdb2f3ea',
     speed: 'bf1f4781b8aa1172e9993c89c36db0dcdc88c495',
@@ -59,6 +62,7 @@ export function cause(code: CauseCode, facts: Cause['facts']): Cause {
     indicator: '2fdfa8559de67744dab415a31c1f987bc016016b',
     pedestrian: '7c45508e360f5b7b8ae1443d73feb01f52a6199d',
   };
+
   return {
     code,
     rule,

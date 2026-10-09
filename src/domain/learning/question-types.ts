@@ -1,13 +1,20 @@
-export type RuleType = 'stop' | 'speed' | 'signal' | 'indicator' | 'pedestrian';
-export type CauseCode =
-  | 'stop-line'
-  | 'speed-limit'
-  | 'red-signal'
-  | 'missing-indicator'
-  | 'wrong-indicator'
-  | 'late-indicator'
-  | 'early-indicator-off'
-  | 'pedestrian-obstruction';
+export const RULE_TYPES = ['stop', 'speed', 'signal', 'indicator', 'pedestrian'] as const;
+
+export type RuleType = (typeof RULE_TYPES)[number];
+
+export const CAUSE_CODES = [
+  'stop-line',
+  'speed-limit',
+  'red-signal',
+  'missing-indicator',
+  'wrong-indicator',
+  'late-indicator',
+  'early-indicator-off',
+  'pedestrian-obstruction',
+] as const;
+
+export type CauseCode = (typeof CAUSE_CODES)[number];
+
 export interface Question {
   id: string;
   version: string;

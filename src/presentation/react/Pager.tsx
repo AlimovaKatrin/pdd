@@ -1,4 +1,5 @@
 import { useState } from 'react';
+
 export function Pager({
   page,
   total,
@@ -11,6 +12,7 @@ export function Pager({
   label?: string;
 }) {
   const safe = Math.min(page, Math.max(0, total - 1));
+
   return (
     <span className="pagination" role="group" aria-label={label}>
       <button
@@ -35,16 +37,22 @@ export function Pager({
     </span>
   );
 }
+
 export function PagedText({ text, limit = 340 }: { text: string; limit?: number }) {
   const [page, setPage] = useState(0);
-  const words = text.split(' '),
-    chunks: string[] = [''];
+
+  const words = text.split(' ');
+
+  const chunks: string[] = [''];
+
   for (const word of words) {
     if (chunks[chunks.length - 1].length + word.length > limit) {
       chunks.push('');
     }
+
     chunks[chunks.length - 1] += `${word} `;
   }
+
   return (
     <>
       {chunks[Math.min(page, chunks.length - 1)]}

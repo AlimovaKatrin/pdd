@@ -1,10 +1,12 @@
 import { expect, test, type Page } from '@playwright/test';
+
 async function start(page: Page) {
   await page.goto('/');
   await page.getByRole('button', { name: 'Поехать в город', exact: true }).click();
   await expect(page.locator('canvas')).toBeVisible();
   await expect(page.locator('#road')).toBeFocused();
 }
+
 async function violate(page: Page) {
   await page.keyboard.down('KeyW');
   await expect(page.getByRole('dialog', { name: 'Разбор нарушения' })).toBeVisible({
@@ -12,11 +14,15 @@ async function violate(page: Page) {
   });
   await page.keyboard.up('KeyW');
 }
+
 test('STOP → optional answer → retry → history persists after reload', async ({ page }) => {
   const errors: string[] = [];
+
   page.on('pageerror', (e) => errors.push(e.message));
   await start(page);
+
   const maneuvers = page.locator('.stat-row').filter({ hasText: 'Правильных манёвров' });
+
   await expect(maneuvers.locator('strong')).toHaveText('0');
   await violate(page);
   await expect(maneuvers.locator('strong')).toHaveText('0');
@@ -49,7 +55,9 @@ test('pause and focus loss stop motion and release input', async ({ page }) => {
   await page.evaluate(() => window.dispatchEvent(new Event('blur')));
   await page.keyboard.up('KeyW');
   await expect(page.getByText('Небольшая остановка')).toBeVisible();
+
   const speed = await page.getByTestId('speed').textContent();
+
   await page.waitForTimeout(500);
   await expect(page.getByTestId('speed')).toHaveText(speed!);
   await page.getByRole('button', { name: 'Продолжить поездку', exact: true }).click();
@@ -61,7 +69,9 @@ test('dashboard restarts and finishes a trip while keeping history', async ({ pa
   await expect(page.getByRole('button', { name: 'О проекте' })).toHaveCount(0);
   await violate(page);
   await page.getByRole('button', { name: 'Продолжить', exact: true }).click();
+
   const controls = page.getByRole('group', { name: 'Управление поездкой' });
+
   await controls.getByRole('button', { name: 'Пауза', exact: true }).click();
   await expect(page.getByText('Небольшая остановка')).toBeVisible();
   await controls.getByRole('button', { name: 'Начать поездку заново' }).click();
@@ -94,10 +104,14 @@ for (const viewport of [
     await page.goto('/');
     await expect(page.locator('canvas')).toBeVisible();
     await page.evaluate(() => document.fonts.ready);
+
     const mapBeforeStart = await page.locator('.map-card').boundingBox();
+
     const fittedCanvas = await page.locator('.phaser-world').evaluate((parent) => {
       const { width, height, x, y } = parent.getBoundingClientRect();
+
       const scale = Math.min(width / 960, height / 800);
+
       return {
         width: 960 * scale,
         height: 800 * scale,
@@ -105,11 +119,13 @@ for (const viewport of [
         y: y + Math.floor((height - 800 * scale) / 2),
       };
     });
+
     const expectStableMap = async () => {
       expect(await page.locator('.map-card').boundingBox()).toEqual(mapBeforeStart);
       await expect
         .poll(async () => {
           const canvas = await page.locator('canvas').boundingBox();
+
           return canvas
             ? Math.max(
                 ...(['x', 'y', 'width', 'height'] as const).map((key) =>
@@ -120,24 +136,33 @@ for (const viewport of [
         })
         .toBeLessThan(1);
     };
+
     await expectStableMap();
     await page.reload();
     await page.evaluate(() => document.fonts.ready);
     await expectStableMap();
+
     const welcome = await page.locator('.welcome').boundingBox();
+
     expect(Math.abs(welcome!.x + welcome!.width / 2 - viewport.width / 2)).toBeLessThan(1);
     expect(Math.abs(welcome!.y + welcome!.height / 2 - viewport.height / 2)).toBeLessThan(1);
+
     for (const mode of ['initial', 'driving', 'instructions']) {
       if (mode === 'driving') {
         await page.getByRole('button', { name: 'Поехать в город', exact: true }).click();
         await expect(page.locator('#road')).toBeFocused();
         await expectStableMap();
+
         const guide = page.getByRole('region', { name: 'ЗНАКОМИМСЯ С ГОРОДОМ' });
+
         const guideBefore = await guide.boundingBox();
+
         const topicRows = await guide
           .locator('.guide-topics button')
           .evaluateAll((buttons) => buttons.map((button) => button.getBoundingClientRect().top));
+
         expect(new Set(topicRows).size).toBe(1);
+
         for (const [label, title, location] of [
           ['STOP', 'Остановка перед STOP', 'Центральная улица'],
           ['Скорость', 'Не быстрее 30 км/ч', 'Верхняя улица'],
@@ -146,6 +171,7 @@ for (const viewport of [
           ['Пешеход', 'Уступите пешеходу', 'Левая улица'],
         ]) {
           const topic = guide.getByRole('button', { name: label, exact: true });
+
           await topic.focus();
           await topic.press('Space');
           await expect(topic).toBeFocused();
@@ -159,9 +185,11 @@ for (const viewport of [
           expect(
             await guide.evaluate((element) => {
               const box = element.getBoundingClientRect();
+
               return [...element.querySelectorAll('button, h2, p, .guide-footer')].every(
                 (child) => {
                   const r = child.getBoundingClientRect();
+
                   return (
                     r.top >= box.top &&
                     r.bottom <= box.bottom &&
@@ -175,17 +203,23 @@ for (const viewport of [
           ).toBe(true);
           await expectStableMap();
         }
+
         if (viewport.width === 1440 || viewport.width === 700) {
           await page.screenshot({ path: `test-results/guide-${viewport.width}.png` });
         }
+
         const map = await page.locator('.map-card').boundingBox();
+
         const dashboard = await page.locator('.dashboard').boundingBox();
+
         expect(dashboard!.y).toBeGreaterThanOrEqual(map!.y + map!.height);
         await expect
           .poll(() =>
             page.locator('canvas').evaluate((canvas) => {
               const world = canvas.getBoundingClientRect();
+
               const map = document.querySelector('.map-card')!.getBoundingClientRect();
+
               return (
                 world.top >= map.top &&
                 world.bottom <= map.bottom &&
@@ -196,52 +230,74 @@ for (const viewport of [
           )
           .toBe(true);
       }
+
       if (mode === 'instructions') {
         const toggle = page.locator('.controls-toggle');
+
         const progressBefore = await page.locator('.progress-card').boundingBox();
+
         await expect(page.locator('.control-row').first()).toBeHidden();
         await toggle.focus();
         await page.keyboard.press('Space');
         await expect(page.locator('.control-row').first()).toBeVisible();
         expect(await page.locator('.progress-card').boundingBox()).toEqual(progressBefore);
+
         const overlaysProgress = await page.locator('.controls-content').evaluate((content) => {
           const popup = content.getBoundingClientRect();
+
           const progress = document.querySelector('.progress-card')!.getBoundingClientRect();
+
           const x = Math.max(popup.left, progress.left) + 10;
+
           const y = Math.max(popup.top, progress.top) + 10;
+
           return content.contains(document.elementFromPoint(x, y));
         });
+
         expect(overlaysProgress).toBe(true);
       }
+
       if (viewport.width > 900 && viewport.height > 680) {
         const map = await page.locator('.map-card').boundingBox();
+
         const lesson = await page.locator('.lesson-card').boundingBox();
+
         const progress = await page.locator('.progress-card').boundingBox();
+
         expect(Math.abs(lesson!.y - map!.y)).toBeLessThan(1);
         expect(Math.abs(progress!.y + progress!.height - (map!.y + map!.height))).toBeLessThan(1);
       }
+
       const layout = await page.evaluate(() => {
         const rect = (selector: string) =>
           document.querySelector(selector)!.getBoundingClientRect();
+
         const footer = rect('.footer');
+
         const panels = ['.map-card', '.lesson-card', '.controls-card', '.progress-card'];
+
         if (document.querySelector('.controls-card[open]')) {
           panels.push('.controls-content');
         }
+
         if (document.querySelector('.dashboard')) {
           panels.push('.dashboard', '.trip-controls');
         }
+
         return {
           overflowX: document.documentElement.scrollWidth > innerWidth,
           overflowY: document.documentElement.scrollHeight > innerHeight,
           clippedPanels: panels.filter((selector) => {
             const r = rect(selector);
+
             return r.top < 0 || r.left < 0 || r.right > innerWidth + 1 || r.bottom > footer.top + 1;
           }),
         };
       });
+
       expect(layout).toEqual({ overflowX: false, overflowY: false, clippedPanels: [] });
     }
+
     await page.locator('.controls-toggle').press('Enter');
     await expect(page.locator('.control-row').first()).toBeHidden();
   });
@@ -252,13 +308,16 @@ test('incident modal fits the viewport before and after revealing, answering and
 }) => {
   await start(page);
   await violate(page);
+
   for (const state of ['question', 'explanation', 'answer', 'saved']) {
     if (state === 'explanation') {
       await page.getByRole('button', { name: 'Показать разбор', exact: true }).click();
     }
+
     if (state === 'answer') {
       await page.getByRole('button', { name: 'После стоп-линии, если никого нет' }).click();
     }
+
     if (state === 'saved') {
       await expect(page.getByText('История хранится в этом браузере')).toBeVisible();
       await page.reload();
@@ -268,6 +327,7 @@ test('incident modal fits the viewport before and after revealing, answering and
       await page.getByRole('button', { name: /^Журнал/ }).click();
       await page.getByRole('button', { name: /Проезд без остановки/ }).click();
     }
+
     for (const [width, height] of [
       [1440, 900],
       [1280, 720],
@@ -278,11 +338,15 @@ test('incident modal fits the viewport before and after revealing, answering and
     ]) {
       await page.setViewportSize({ width, height });
       await page.evaluate(() => document.fonts.ready);
+
       const dialog = page.getByRole('dialog', { name: 'Разбор нарушения' });
+
       const layout = await dialog.evaluate((el) => {
         const r = el.getBoundingClientRect();
+
         const clipped = [...el.querySelectorAll('button, h2, h3, p, a')].some((child) => {
           const box = child.getBoundingClientRect();
+
           return (
             box.top < r.top ||
             box.bottom > r.bottom + 1 ||
@@ -290,6 +354,7 @@ test('incident modal fits the viewport before and after revealing, answering and
             box.right > r.right + 1
           );
         });
+
         return {
           inside:
             r.top >= 0 && r.bottom <= innerHeight + 1 && r.left >= 0 && r.right <= innerWidth + 1,
@@ -297,11 +362,13 @@ test('incident modal fits the viewport before and after revealing, answering and
           clipped,
         };
       });
+
       expect(layout, `${state} at ${width}×${height}`).toEqual({
         inside: true,
         scroll: false,
         clipped: false,
       });
+
       if (state === 'answer' && width === 1024) {
         await page.screenshot({ path: 'test-results/incident-compact.png' });
       }

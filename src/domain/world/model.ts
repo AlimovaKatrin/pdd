@@ -1,20 +1,24 @@
 import type { CauseCode, Question, RuleType } from '../learning/question-types';
+
 export interface Point {
   x: number;
   y: number;
 }
+
 export interface Road {
   x: number;
   y: number;
   width: number;
   height: number;
 }
+
 export interface StopLine {
   id: string;
   a: Point;
   b: Point;
   direction: Point;
 }
+
 export interface RoadMap {
   version: string;
   width: number;
@@ -27,18 +31,22 @@ export interface RoadMap {
   intersections?: Intersection[];
   crossings?: Crossing[];
 }
+
 export type Indicator = 'left' | 'right' | null;
+
 export interface Vehicle extends Point {
   heading: number;
   speed: number;
   indicator: Indicator;
   indicatorTurn: number;
 }
+
 export interface StopEpisode {
   phase: 'ready' | 'crossed';
   stopped: boolean;
   number: number;
 }
+
 export interface World {
   tick: number;
   vehicle: Vehicle;
@@ -56,18 +64,21 @@ export interface World {
   advisories: string[];
   advisoryUntil: number;
 }
+
 export interface Controls {
   throttle: boolean;
   reverse: boolean;
   brake: boolean;
   steer: number;
 }
+
 export const emptyControls = (): Controls => ({
   throttle: false,
   reverse: false,
   brake: false,
   steer: 0,
 });
+
 export function initialWorld(map: RoadMap): World {
   return {
     tick: 0,
@@ -95,9 +106,13 @@ export function initialWorld(map: RoadMap): World {
     advisoryUntil: 0,
   };
 }
+
 export const VEHICLE_LENGTH = 4.2;
+
 export const VEHICLE_WIDTH = 1.8;
+
 export const RULES_VERSION = 'mvp-preview-4';
+
 export interface StopViolation {
   type: 'stop';
   roadObjectId: string;
@@ -105,6 +120,7 @@ export interface StopViolation {
   speed: number;
   tick: number;
 }
+
 export interface Cause {
   code: CauseCode;
   rule: RuleType;
@@ -114,6 +130,7 @@ export interface Cause {
   referenceUrl?: string;
   facts: Record<string, string | number | boolean>;
 }
+
 export interface DetectedViolation {
   type: RuleType;
   roadObjectId: string;
@@ -122,6 +139,7 @@ export interface DetectedViolation {
   tick: number;
   causes: Cause[];
 }
+
 export interface Violation extends DetectedViolation {
   id: string;
   tripId: string;
@@ -133,6 +151,7 @@ export interface Violation extends DetectedViolation {
   material: Question | null;
   materialUnavailable?: string;
 }
+
 export interface AnswerAttempt {
   id: string;
   violationId: string;
@@ -143,6 +162,7 @@ export interface AnswerAttempt {
   assisted: boolean;
   date: string;
 }
+
 export interface History {
   schemaVersion: 2;
   violations: Violation[];
@@ -151,6 +171,7 @@ export interface History {
   trips: Trip[];
   skips: Skip[];
 }
+
 export const emptyHistory = (): History => ({
   schemaVersion: 2,
   violations: [],
@@ -166,11 +187,13 @@ export interface Trip {
   finishedAt?: string;
   status: 'active' | 'finished' | 'restarted' | 'interrupted' | 'legacy';
 }
+
 export interface Skip {
   id: string;
   violationId: string;
   date: string;
 }
+
 export interface SpeedZone extends Road {
   id: string;
   limit: number;
@@ -178,17 +201,21 @@ export interface SpeedZone extends Road {
   sign: Point;
   end: Point;
 }
+
 export type SignalColor = 'green' | 'yellow' | 'red' | 'red-yellow';
+
 export interface TrafficSignal {
   id: string;
   line: StopLine;
   offset: number;
   phases: { color: SignalColor; ticks: number }[];
 }
+
 export interface Intersection extends Point {
   id: string;
   radius: number;
 }
+
 export interface Maneuver {
   intersectionId: string;
   episode: number;
@@ -201,6 +228,7 @@ export interface Maneuver {
   signalled: boolean;
   reported: CauseCode[];
 }
+
 export interface Crossing {
   id: string;
   line: StopLine;
@@ -209,6 +237,7 @@ export interface Crossing {
   speed: number;
   restartTicks: number;
 }
+
 export interface PedestrianState {
   progress: number;
   waiting: number;

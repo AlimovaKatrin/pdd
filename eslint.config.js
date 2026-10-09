@@ -1,10 +1,24 @@
 import js from '@eslint/js';
+import stylistic from '@stylistic/eslint-plugin';
 import tseslint from 'typescript-eslint';
 import prettier from 'eslint-config-prettier';
 import hooks from 'eslint-plugin-react-hooks';
 import jsxA11y from 'eslint-plugin-jsx-a11y';
 import refresh from 'eslint-plugin-react-refresh';
 import globals from 'globals';
+
+const separatedStatements = [
+  'const',
+  'let',
+  'var',
+  'block-like',
+  'function',
+  'class',
+  'type',
+  'interface',
+  'export',
+];
+
 const restrictions = (layers, external = []) => [
   'error',
   {
@@ -24,6 +38,7 @@ const restrictions = (layers, external = []) => [
     ],
   },
 ];
+
 export default tseslint.config(
   {
     ignores: [
@@ -41,6 +56,22 @@ export default tseslint.config(
     files: ['**/*.{ts,tsx}'],
   })),
   prettier,
+  {
+    files: ['**/*.{js,mjs,ts,tsx}'],
+    plugins: { '@stylistic': stylistic },
+    rules: {
+      'one-var': ['error', 'never'],
+      '@stylistic/lines-between-class-members': ['error', 'always'],
+      '@stylistic/padding-line-between-statements': [
+        'error',
+        { blankLine: 'always', prev: '*', next: separatedStatements },
+        { blankLine: 'always', prev: separatedStatements, next: '*' },
+        { blankLine: 'always', prev: '*', next: 'return' },
+        { blankLine: 'always', prev: 'import', next: '*' },
+        { blankLine: 'any', prev: 'import', next: 'import' },
+      ],
+    },
+  },
   {
     files: ['**/*.{ts,tsx}'],
     languageOptions: {
@@ -121,10 +152,8 @@ export default tseslint.config(
     },
   },
   {
-    files: ['**/*.test.ts'],
+    files: ['tests/**/*.test.ts'],
     rules: {
-      'no-restricted-imports': 'off',
-      'no-restricted-globals': 'off',
       '@typescript-eslint/require-await': 'off',
     },
   },

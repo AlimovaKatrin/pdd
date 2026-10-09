@@ -41,7 +41,9 @@ const TOPICS = [
 
 export function CityGuide() {
   const [selected, setSelected] = useState(0);
+
   const topic = TOPICS[selected];
+
   return (
     <section className="lesson-card" aria-labelledby="city-guide-title">
       <div className="eyebrow" id="city-guide-title">

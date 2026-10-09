@@ -1,4 +1,5 @@
 import type { RoadMap } from '../../domain/world/model';
+
 export const neighborhood: RoadMap = {
   version: 'neighborhood-2',
   width: 120,

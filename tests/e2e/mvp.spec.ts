@@ -1,24 +1,31 @@
 import { expect, test, type Page } from '@playwright/test';
-import { emptyHistory, type History } from '../src/domain/world/model';
-import { stopQuestion } from '../src/content/questions/stop';
-import { trafficQuestions } from '../src/content/questions/traffic';
-import { cause } from '../src/domain/violations/causes';
+import { emptyHistory, type History } from '../../src/domain/world/model';
+import { stopQuestion } from '../../src/content/questions/stop';
+import { trafficQuestions } from '../../src/content/questions/traffic';
+import { cause } from '../../src/domain/violations/causes';
+
 async function seed(page: Page, history: History) {
   await page.goto('/');
   await expect(page.getByRole('button', { name: 'Поехать в город', exact: true })).toBeEnabled();
   await page.evaluate(async (value) => {
     await new Promise<void>((resolve, reject) => {
       const open = indexedDB.open('pdd-city', 1);
+
       open.onsuccess = () => {
-        const db = open.result,
-          tx = db.transaction('history', 'readwrite');
+        const db = open.result;
+
+        const tx = db.transaction('history', 'readwrite');
+
         tx.objectStore('history').put(value, 'current');
+
         tx.oncomplete = () => {
           db.close();
           resolve();
         };
+
         tx.onerror = () => reject(tx.error ?? new Error('History write failed'));
       };
+
       open.onerror = () => reject(open.error ?? new Error('History open failed'));
     });
   }, history);
@@ -26,6 +33,7 @@ async function seed(page: Page, history: History) {
   await expect(page.getByRole('button', { name: 'Поехать в город', exact: true })).toBeEnabled();
   await page.getByRole('button', { name: /^Журнал/ }).click();
 }
+
 function fixture(count = 1): History {
   return {
     ...emptyHistory(),
@@ -54,9 +62,11 @@ function fixture(count = 1): History {
     })),
   };
 }
+
 async function fits(page: Page) {
   const layout = await page.getByRole('dialog').evaluate((el) => {
     const r = el.getBoundingClientRect();
+
     return {
       inside: r.top >= 0 && r.bottom <= innerHeight + 1 && r.left >= 0 && r.right <= innerWidth + 1,
       scroll: el.scrollHeight > el.clientHeight + 1 || el.scrollWidth > el.clientWidth + 1,
@@ -68,7 +78,9 @@ async function fits(page: Page) {
           ) {
             return false;
           }
+
           const b = c.getBoundingClientRect();
+
           return (
             b.top < r.top || b.bottom > r.bottom + 1 || b.left < r.left || b.right > r.right + 1
           );
@@ -76,12 +88,15 @@ async function fits(page: Page) {
       ),
     };
   });
+
   expect(layout).toEqual({ inside: true, scroll: false, clipped: false });
 }
+
 test('scrollable journal, filters, attempt history and keyboard return preserve position', async ({
   page,
 }) => {
   const data = fixture(121);
+
   data.answers = [
     {
       id: 'a',
@@ -107,13 +122,19 @@ test('scrollable journal, filters, attempt history and keyboard return preserve 
   data.skips = [{ id: 'skip', violationId: 'v-20', date: '2026-10-09T10:09:00Z' }];
   data.revealed = ['v-20'];
   await seed(page, data);
+
   const list = page.getByRole('region', { name: 'Записи журнала' });
+
   await expect(list.getByRole('button')).toHaveCount(121);
   await expect(page.getByRole('button', { name: 'Страница: вперёд' })).toHaveCount(0);
   expect((await page.getByRole('dialog').boundingBox())!.width).toBeGreaterThan(650);
+
   const entry = list.locator('[data-entry-id="v-20"]');
+
   await entry.scrollIntoViewIfNeeded();
+
   const position = await list.evaluate((el) => el.scrollTop);
+
   expect(position).toBeGreaterThan(0);
   await entry.click();
   await page.getByRole('button', { name: 'Попытки (3)' }).click();
@@ -128,6 +149,7 @@ test('scrollable journal, filters, attempt history and keyboard return preserve 
   await page.getByLabel('Результат ответа').selectOption('unanswered');
   await expect(list.getByRole('button')).toHaveCount(120);
   await expect.poll(() => list.evaluate((el) => el.scrollTop)).toBe(0);
+
   for (const [width, height] of [
     [1440, 900],
     [1280, 720],
@@ -137,16 +159,20 @@ test('scrollable journal, filters, attempt history and keyboard return preserve 
   ]) {
     await page.setViewportSize({ width, height });
     await fits(page);
+
     const actions = await page.locator('.journal-modal .modal-actions').boundingBox();
+
     await list.getByRole('button').last().scrollIntoViewIfNeeded();
     await expect(list.getByRole('button').last()).toBeInViewport();
     expect(await list.evaluate((el) => el.scrollTop)).toBeGreaterThan(0);
     expect(await page.locator('.journal-modal .modal-actions').boundingBox()).toEqual(actions);
     await fits(page);
+
     if (width === 1440 || width === 390) {
       await page.screenshot({ path: `test-results/journal-scroll-${width}.png` });
     }
   }
+
   await page.getByLabel('Результат ответа').focus();
   await page.keyboard.press('Tab');
   await expect(page.getByRole('button', { name: /Проезд без остановки/ }).first()).toBeFocused();
@@ -157,6 +183,7 @@ test('scrollable journal, filters, attempt history and keyboard return preserve 
 });
 test('all new rule cards fit after reveal and answer on compact displays', async ({ page }) => {
   const data = fixture(trafficQuestions.length);
+
   data.violations = data.violations.map((v, i) => ({
     ...v,
     type: trafficQuestions[i].rule,
@@ -173,14 +200,18 @@ test('all new rule cards fit after reveal and answer on compact displays', async
     material: trafficQuestions[i],
   }));
   await seed(page, data);
+
   for (const q of trafficQuestions) {
     await page.getByLabel('Вид нарушения').selectOption(q.rule);
     await page.locator('.journal-list > button').click();
     await page.getByRole('button', { name: 'Показать разбор', exact: true }).click();
+
     if (await page.getByRole('button', { name: 'Вопрос', exact: true }).isVisible()) {
       await page.getByRole('button', { name: 'Вопрос', exact: true }).click();
     }
+
     await page.getByRole('button', { name: q.options[0], exact: false }).click();
+
     for (const [width, height] of [
       [1280, 720],
       [1024, 650],
@@ -190,11 +221,13 @@ test('all new rule cards fit after reveal and answer on compact displays', async
       await page.setViewportSize({ width, height });
       await fits(page);
     }
+
     if (q.rule === 'indicator') {
       await page.getByRole('button', { name: 'Обстоятельства', exact: true }).click();
       await page.getByRole('button', { name: 'Причина: вперёд' }).click();
       await fits(page);
     }
+
     await page.getByRole('button', { name: 'Назад в журнал' }).click();
   }
 });
@@ -202,7 +235,9 @@ test('long local material and image are accessible in pages without scrolling', 
   page,
 }) => {
   const data = fixture();
+
   const q = data.violations[0].material!;
+
   q.title = 'Тест длинного материала. '.repeat(35);
   q.options = [
     'Длинный вариант для проверки переноса. '.repeat(20),
@@ -280,12 +315,15 @@ test('pause and keyboard indicator toggle remain usable in a compact viewport', 
   await expect(
     page.getByRole('button', { name: 'Продолжить поездку', exact: true }),
   ).toBeInViewport();
+
   const box = await page.locator('.pause-card').boundingBox();
+
   expect(box!.y).toBeGreaterThanOrEqual(0);
   expect(box!.y + box!.height).toBeLessThanOrEqual(650);
   expect(
     await page.locator('.pause-card h2').evaluate((el) => {
       const r = el.getBoundingClientRect();
+
       return el.contains(document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2));
     }),
   ).toBe(true);

@@ -1,4 +1,5 @@
 import type { RuleType } from '../../domain/learning/question';
+
 export const references: Record<RuleType, { label: string; url: string; verification: string }> =
   Object.fromEntries(
     [
