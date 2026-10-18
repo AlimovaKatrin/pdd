@@ -90,7 +90,7 @@ export function IncidentContext({
           : 'Дата проверки в архивной записи не указана'}
       </p>
       {selectedCause.rule !== 'stop' && (
-        <p className="source-note">{formatCauseFacts(selectedCause)}</p>
+        <p className="cause-facts">{formatCauseFacts(selectedCause)}</p>
       )}
     </section>
   );

@@ -1,3 +1,5 @@
+import type { Collision } from '../../domain/simulation/collision';
+import { worldAfterSafeReturn } from '../../domain/world/safe-return';
 import { activeSpeedLimit } from '../../domain/world/traffic';
 import type { ReadonlyData } from '../../domain/world/read-only';
 import { freezeSnapshot } from './read-only-snapshot';
@@ -31,9 +33,10 @@ const RETRY_LOOKBACK_SECONDS = 5;
 
 const UI_UPDATE_INTERVAL_TICKS = 6;
 
-export type PauseReason = 'manual' | 'blur' | 'incident' | 'journal';
+export type PauseReason = 'manual' | 'blur' | 'incident' | 'journal' | 'collision';
 
 export type SessionSnapshot = ReadonlyData<{
+  collision: Collision | null;
   completedTripId: string | null;
   activeTripId: string | null;
   ready: boolean;
@@ -81,6 +84,8 @@ export class GameSession {
   private ready = false;
 
   private current: Violation | null = null;
+
+  private collision: Collision | null = null;
 
   private answer: AnswerAttempt | null = null;
 
@@ -192,12 +197,13 @@ export class GameSession {
     const current = structuredClone(this.current);
 
     this.snapshot = freezeSnapshot({
+      collision: structuredClone(this.collision),
       completedTripId: this.completedTripId,
       activeTripId: this.started ? this.tripId : null,
       ready: this.ready,
       started: this.started,
       driving: {
-        speedKmh: Math.round(Math.abs(this.world.vehicle.speed) * 3.6),
+        speedKmh: Math.abs(this.world.vehicle.speed) * 3.6,
         speedLimit: activeSpeedLimit(this.mapData, this.world.vehicle).limit,
         indicator: this.world.vehicle.indicator,
         reversing: this.world.vehicle.speed < 0,
@@ -227,6 +233,7 @@ export class GameSession {
     }
 
     this.completedTripId = null;
+    this.collision = null;
     this.world = initialWorld(this.mapData);
     this.controls = emptyControls();
     this.tripId = this.environment.id();
@@ -296,13 +303,20 @@ export class GameSession {
     const result = stepWorld(this.world, this.controls, this.mapData);
 
     this.world = result.world;
+    this.collision = result.collision;
+
+    if (this.collision) {
+      this.pauses.add('collision');
+      this.clearInput();
+    }
+
     this.rememberSnapshot();
 
     const [firstViolation, ...otherViolations] = result.violations;
 
     if (firstViolation) {
       this.handleViolations([firstViolation, ...otherViolations]);
-    } else if (this.world.tick % UI_UPDATE_INTERVAL_TICKS === 0) {
+    } else if (this.collision || this.world.tick % UI_UPDATE_INTERVAL_TICKS === 0) {
       this.publish();
     }
   }
@@ -352,7 +366,7 @@ export class GameSession {
       environment: this.environment,
     });
 
-    if (isNew) {
+    if (isNew && !this.collision) {
       this.rememberCheckpoint(entry.id);
     }
 
@@ -371,6 +385,10 @@ export class GameSession {
   }
 
   continueTrip() {
+    if (this.collision) {
+      return;
+    }
+
     this.recordSkip();
     this.current = null;
     this.answer = null;
@@ -380,11 +398,11 @@ export class GameSession {
   }
 
   canRetry(id: string) {
-    return this.checkpoints.has(id);
+    return !this.collision && this.checkpoints.has(id);
   }
 
   retry() {
-    if (!this.started) {
+    if (!this.started || this.collision) {
       return;
     }
 
@@ -409,15 +427,25 @@ export class GameSession {
       return;
     }
 
+    const world = this.mapData.network
+      ? worldAfterSafeReturn(this.mapData, this.world)
+      : { ...initialWorld(this.mapData), successfulManeuvers: this.world.successfulManeuvers };
+
+    if (!world) {
+      this.notice = 'Свободного места для возврата пока нет. Поездка остаётся на паузе.';
+      this.pause('manual');
+
+      return;
+    }
+
     this.recordSkip();
-    this.beginAttempt({
-      ...initialWorld(this.mapData),
-      successfulManeuvers: this.world.successfulManeuvers,
-    });
+    this.beginAttempt(world);
   }
 
   private beginAttempt(world: World) {
     this.world = world;
+    this.collision = null;
+    this.pauses.delete('collision');
     this.attemptId = this.environment.id();
     this.snapshots = [structuredClone(this.world)];
     this.current = null;
@@ -505,6 +533,7 @@ export class GameSession {
 
   finish() {
     this.recordSkip();
+    this.collision = null;
     this.endTrip('finished');
     this.completedTripId = this.tripId;
     this.persist();

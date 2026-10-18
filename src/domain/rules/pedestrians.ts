@@ -1,3 +1,4 @@
+import { pedestrianDuty } from '../world/pedestrian-duty';
 import { cause } from '../violations/causes';
 import {
   VEHICLE_LENGTH,
@@ -76,6 +77,12 @@ export function checkPedestrians(previous: World, next: World, map: RoadMap): De
       continue;
     }
 
+    const duty = pedestrianDuty(crossing, pedestrian, next, map);
+
+    if (!duty) {
+      continue;
+    }
+
     violations.push({
       type: 'pedestrian',
       roadObjectId: crossing.id,
@@ -83,7 +90,11 @@ export function checkPedestrians(previous: World, next: World, map: RoadMap): De
       speed: next.vehicle.speed,
       tick: next.tick,
       causes: [
-        cause('pedestrian-obstruction', {
+        cause(duty, {
+          participantId: crossing.id,
+          participantLabel: crossing.label ?? 'Пешеход',
+          startedTick: pedestrian.startedTick ?? 'unknown',
+          playerSignal: next.junctionPassage?.entrySignal ?? 'unknown',
           priority: true,
           intendedSpeed: crossing.speed,
           actualSpeed: 0,

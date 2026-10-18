@@ -1,4 +1,12 @@
-export const RULE_TYPES = ['stop', 'speed', 'signal', 'indicator', 'pedestrian'] as const;
+export const RULE_TYPES = [
+  'stop',
+  'speed',
+  'signal',
+  'indicator',
+  'pedestrian',
+  'priority',
+  'oncoming',
+] as const;
 
 export type RuleType = (typeof RULE_TYPES)[number];
 
@@ -12,6 +20,14 @@ export const CAUSE_CODES = [
   'late-indicator',
   'early-indicator-off',
   'pedestrian-obstruction',
+  'priority-left-green',
+  'priority-clearing',
+  'priority-main',
+  'priority-right',
+  'priority-left-equal',
+  'oncoming-lane',
+  'pedestrian-turn',
+  'pedestrian-clearing',
 ] as const;
 
 export type CauseCode = (typeof CAUSE_CODES)[number];

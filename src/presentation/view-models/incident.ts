@@ -1,3 +1,4 @@
+import { formatPriorityFacts } from './priority-facts';
 import type { Cause, History, Violation } from '../../domain/world/model';
 import type { Question } from '../../domain/learning/question';
 import type { ReadonlyData } from '../../domain/world/read-only';
@@ -44,21 +45,51 @@ export function formatCauseFacts(cause: ReadonlyData<Cause>) {
 
   switch (cause.rule) {
     case 'speed':
+      if (typeof facts.limitKmh !== 'number' || typeof facts.speedKmh !== 'number') {
+        return 'Лимит и точная скорость в архивной записи не сохранены.';
+      }
+
       return `Лимит: ${String(facts.limitKmh)} км/ч. Превышение: ${(Number(facts.speedKmh) - Number(facts.limitKmh)).toFixed(1)} км/ч.`;
     case 'signal':
+      if (facts.signal !== 'red' && facts.signal !== 'red-yellow') {
+        return 'Сигнал при пересечении в архивной записи не сохранён.';
+      }
+
       return `Сигнал при пересечении: ${facts.signal === 'red' ? 'красный' : 'красный с жёлтым'}.`;
     case 'pedestrian':
-      return `Пешеход имел преимущество и был вынужден остановиться: ${String(facts.intendedSpeed)} → 0 м/с.`;
+      if (typeof facts.intendedSpeed !== 'number' || facts.actualSpeed !== 0) {
+        return 'Подробности движения пешехода в архивной записи не сохранены.';
+      }
+
+      return `${typeof facts.participantLabel === 'string' ? facts.participantLabel : 'Пешеход'} имел преимущество и был вынужден остановиться: ${String(facts.intendedSpeed)} → 0 м/с.`;
+
+    case 'priority':
+      return formatPriorityFacts(facts);
+
+    case 'oncoming':
+      if (facts.marking !== 'solid' && facts.marking !== 'double-solid') {
+        return 'Вид разметки в архивной записи не сохранён.';
+      }
+
+      return facts.marking === 'double-solid'
+        ? 'На участке действует двойная сплошная разметка. Она разделяет встречные потоки.'
+        : 'На участке действует сплошная разметка. Она разделяет встречные потоки.';
 
     case 'indicator': {
+      if (facts.direction !== 'left' && facts.direction !== 'right') {
+        return 'Направление манёвра в архивной записи не сохранено.';
+      }
+
       const direction = facts.direction === 'left' ? 'налево' : 'направо';
 
-      let indicator = 'правый';
+      let indicator = 'не сохранён';
 
       if (facts.initialIndicator === 'off') {
         indicator = 'выключен';
       } else if (facts.initialIndicator === 'left') {
         indicator = 'левый';
+      } else if (facts.initialIndicator === 'right') {
+        indicator = 'правый';
       }
 
       return `Поворот ${direction}. Сигнал при начале: ${indicator}.`;

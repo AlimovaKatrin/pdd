@@ -41,7 +41,7 @@ export function drawRoadFeatures(
       scene,
       crossing.to.x * PIXELS_PER_METER + 18,
       crossing.to.y * PIXELS_PER_METER,
-      'ПЕШЕХОД',
+      crossing.label ?? 'ПЕШЕХОД',
       '#253e34',
       8,
     );

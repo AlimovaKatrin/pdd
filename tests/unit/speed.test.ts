@@ -77,12 +77,15 @@ describe('city speed limit', () => {
   it('requires a finite positive city limit and a unique ID', () => {
     for (const limit of [0, -1, NaN, Infinity]) {
       expect(() =>
-        validateMap({ ...neighborhood, citySpeedLimit: { id: 'city', limit } }),
+        validateMap({ ...neighborhood, citySpeedLimit: { id: 'city', limit, reference: '10.2' } }),
       ).toThrow();
     }
 
     expect(() =>
-      validateMap({ ...neighborhood, citySpeedLimit: { id: 'east-30', limit: 60 } }),
+      validateMap({
+        ...neighborhood,
+        citySpeedLimit: { id: 'east-30', limit: 60, reference: '10.2' },
+      }),
     ).toThrow();
   });
 });

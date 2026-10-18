@@ -6,6 +6,14 @@ import { prepareIncident } from '../../src/use-cases/session/prepare-incident';
 import { emptyHistory } from '../../src/domain/world/model';
 
 const paragraphs = {
+  'priority-left-green': '13.4',
+  'priority-clearing': '13.7, 13.8',
+  'priority-main': '13.9',
+  'priority-right': '13.10, 13.11',
+  'priority-left-equal': '13.10, 13.12',
+  'oncoming-lane': '9.1(1)',
+  'pedestrian-turn': '13.1',
+  'pedestrian-clearing': '13.8',
   'stop-line': 'знак 2.5',
   'speed-limit': 'знак 3.24',
   'city-speed-limit': '10.2',
@@ -43,7 +51,7 @@ it.each(CAUSE_CODES)(
 
     expect(entry.material).toBeNull();
     expect(entry.causes[0].reference).toContain(paragraphs[code]);
-    expect(entry.causes[0].referenceCheckedOn).toBe('2026-10-14');
+    expect(entry.causes[0].referenceCheckedOn).toBe('2026-10-18');
     expect(entry.causes[0].referenceUrl).toMatch(
       /^https:\/\/www.consultant.ru\/document\/cons_doc_LAW_2709\//,
     );

@@ -15,6 +15,10 @@ export function updateDrivingProgress(
 
   next.drivingProgress = progress;
 
+  if (next.maneuver && violations.length) {
+    next.maneuver.valid = false;
+  }
+
   for (const signal of map.signals ?? []) {
     if (
       previous.signalEpisodes[signal.id].phase !== 'ready' ||
@@ -34,6 +38,7 @@ export function updateDrivingProgress(
 
   if (
     maneuver?.confirmed &&
+    maneuver.valid &&
     !next.maneuver &&
     next.vehicle.speed > 0 &&
     Math.abs(angleDifference(next.vehicle.heading, maneuver.entryHeading)) >=
@@ -41,7 +46,7 @@ export function updateDrivingProgress(
     maneuver.initialIndicator === maneuver.direction &&
     previous.vehicle.indicator === maneuver.direction &&
     !maneuver.reported.length &&
-    !violations.some((v) => v.type === 'indicator' && v.episode === maneuver.episode)
+    !violations.length
   ) {
     next.successfulManeuvers++;
   }

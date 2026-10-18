@@ -1,3 +1,9 @@
+import { updatePlayerPassage } from '../world/junction-passage';
+import { checkPriority } from '../rules/priority';
+import { checkOncoming } from '../rules/oncoming';
+import { stopAtContact } from './stop-at-contact';
+import { detectCollision, type Collision } from './collision';
+import { stepTraffic } from './traffic';
 import { checkTurn } from '../maneuvers/turn';
 import { updateDrivingProgress } from './driving-progress';
 import { checkSpeed } from '../rules/speed';
@@ -9,8 +15,8 @@ import { type Controls, type RoadMap, type DetectedViolation, type World } from 
 
 export const STEP = 1 / 60;
 
-// Technical ceiling of 72 km/h makes the city limit reachable during ordinary play.
-const MAX_FORWARD_SPEED_METERS_PER_SECOND = 20;
+// A handling parameter, independent of the legal speed limit.
+const MAX_FORWARD_SPEED_METERS_PER_SECOND = 12;
 
 const MAX_REVERSE_SPEED_METERS_PER_SECOND = 3;
 
@@ -18,7 +24,7 @@ export function stepWorld(
   world: World,
   controls: Controls,
   map: RoadMap,
-): { world: World; violations: DetectedViolation[] } {
+): { world: World; violations: DetectedViolation[]; collision: Collision | null } {
   const v = { ...world.vehicle };
 
   if (controls.brake || (controls.throttle && controls.reverse)) {
@@ -67,6 +73,16 @@ export function stepWorld(
     advisories: world.tick < world.advisoryUntil ? world.advisories : [],
   };
 
+  stepTraffic(world, next, map, STEP);
+
+  const collision = detectCollision(world, next);
+
+  if (collision) {
+    stopAtContact(world, next, map, collision.fraction);
+  }
+
+  updatePlayerPassage(world, next, map);
+
   const violations: DetectedViolation[] = [];
 
   for (const line of map.stops) {
@@ -88,11 +104,17 @@ export function stepWorld(
 
   violations.push(
     ...checkSpeed(next, map),
+    ...checkOncoming(world, next, map),
+    ...checkPriority(world, next, map, STEP),
     ...checkSignals(world, next, map),
     ...checkTurn(world, next, map),
     ...stepPedestrians(world, next, map, STEP),
   );
   updateDrivingProgress(world, next, map, violations);
 
-  return { world: next, violations };
+  if (collision) {
+    v.speed = 0;
+  }
+
+  return { world: next, violations, collision };
 }

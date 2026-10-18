@@ -1,0 +1,114 @@
+diff --git a/node_modules/phaser/dist/phaser.esm.js b/node_modules/phaser/dist/phaser.esm.js
+index 32e7581..02dad51 100644
+--- a/node_modules/phaser/dist/phaser.esm.js
++++ b/node_modules/phaser/dist/phaser.esm.js
+@@ -18445,16 +18445,31 @@ var VisibilityHandler = function (game)
+         document.addEventListener(hiddenVar, onChange, false);
+     }
+ 
+-    window.onblur = function ()
++    var onBlur = function ()
+     {
+         eventEmitter.emit(Events.BLUR);
+     };
+ 
+-    window.onfocus = function ()
++    var onFocus = function ()
+     {
+         eventEmitter.emit(Events.FOCUS);
+     };
+ 
++    window.addEventListener('blur', onBlur);
++    window.addEventListener('focus', onFocus);
++
++    // Release handlers when this instance is removed, including repeated React mounts.
++    eventEmitter.once(Events.DESTROY, function ()
++    {
++        if (hiddenVar)
++        {
++            document.removeEventListener(hiddenVar, onChange, false);
++        }
++
++        window.removeEventListener('blur', onBlur);
++        window.removeEventListener('focus', onFocus);
++    });
++
+     //  Automatically give the window focus unless config says otherwise
+     if (window.focus && game.config.autoFocus)
+     {
+diff --git a/node_modules/phaser/dist/phaser.js b/node_modules/phaser/dist/phaser.js
+index 51b1458..86aa166 100644
+--- a/node_modules/phaser/dist/phaser.js
++++ b/node_modules/phaser/dist/phaser.js
+@@ -18457,16 +18457,31 @@ var VisibilityHandler = function (game)
+         document.addEventListener(hiddenVar, onChange, false);
+     }
+ 
+-    window.onblur = function ()
++    var onBlur = function ()
+     {
+         eventEmitter.emit(Events.BLUR);
+     };
+ 
+-    window.onfocus = function ()
++    var onFocus = function ()
+     {
+         eventEmitter.emit(Events.FOCUS);
+     };
+ 
++    window.addEventListener('blur', onBlur);
++    window.addEventListener('focus', onFocus);
++
++    // Release handlers when this instance is removed, including repeated React mounts.
++    eventEmitter.once(Events.DESTROY, function ()
++    {
++        if (hiddenVar)
++        {
++            document.removeEventListener(hiddenVar, onChange, false);
++        }
++
++        window.removeEventListener('blur', onBlur);
++        window.removeEventListener('focus', onFocus);
++    });
++
+     //  Automatically give the window focus unless config says otherwise
+     if (window.focus && game.config.autoFocus)
+     {
+diff --git a/node_modules/phaser/src/core/VisibilityHandler.js b/node_modules/phaser/src/core/VisibilityHandler.js
+index 4c2e9cd..d2cdfe2 100644
+--- a/node_modules/phaser/src/core/VisibilityHandler.js
++++ b/node_modules/phaser/src/core/VisibilityHandler.js
+@@ -65,16 +65,31 @@ var VisibilityHandler = function (game)
+         document.addEventListener(hiddenVar, onChange, false);
+     }
+ 
+-    window.onblur = function ()
++    var onBlur = function ()
+     {
+         eventEmitter.emit(Events.BLUR);
+     };
+ 
+-    window.onfocus = function ()
++    var onFocus = function ()
+     {
+         eventEmitter.emit(Events.FOCUS);
+     };
+ 
++    window.addEventListener('blur', onBlur);
++    window.addEventListener('focus', onFocus);
++
++    // Release handlers when this instance is removed, including repeated React mounts.
++    eventEmitter.once(Events.DESTROY, function ()
++    {
++        if (hiddenVar)
++        {
++            document.removeEventListener(hiddenVar, onChange, false);
++        }
++
++        window.removeEventListener('blur', onBlur);
++        window.removeEventListener('focus', onFocus);
++    });
++
+     //  Automatically give the window focus unless config says otherwise
+     if (window.focus && game.config.autoFocus)
+     {

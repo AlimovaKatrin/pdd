@@ -11,7 +11,7 @@ export function Modal({
 }: {
   title: string;
   children: ReactNode;
-  onClose: () => void;
+  onClose?: () => void;
   wide?: boolean;
   className?: string;
   initialFocus?: RefObject<HTMLElement | null>;
@@ -41,7 +41,7 @@ export function Modal({
       if (e.key === 'Escape') {
         e.preventDefault();
         e.stopPropagation();
-        close.current();
+        close.current?.();
       }
 
       if (e.key === 'Tab') {
@@ -80,9 +80,11 @@ export function Modal({
         aria-modal="true"
         aria-label={title}
       >
-        <button className="icon-button close-modal" onClick={onClose} aria-label="Закрыть">
-          <X size={20} />
-        </button>
+        {onClose && (
+          <button className="icon-button close-modal" onClick={onClose} aria-label="Закрыть">
+            <X size={20} />
+          </button>
+        )}
         {children}
       </div>
     </div>

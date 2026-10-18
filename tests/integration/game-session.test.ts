@@ -43,11 +43,24 @@ function driveToViolation(s: GameSession) {
   expect(s.getSnapshot().current).not.toBeNull();
 }
 
-it('runs city speeding through pause, retry, braking, rearming and persisted history', async () => {
+it('runs signed speeding through pause, retry, braking, rearming and persisted history', async () => {
   const map = {
     ...neighborhood,
     spawn: { x: 107.5, y: 87, heading: -Math.PI / 2 },
     signals: [],
+    speedZones: [
+      {
+        ...neighborhood.speedZones![0],
+        id: 'test-signed-30',
+        x: 104,
+        y: 0,
+        width: 8,
+        height: 100,
+        direction: { x: 0, y: -1 },
+        sign: { x: 112, y: 100 },
+        end: { x: 112, y: 0 },
+      },
+    ],
   };
 
   const repository = new MemoryHistory();
@@ -59,15 +72,14 @@ it('runs city speeding through pause, retry, braking, rearming and persisted his
 
   await session.initialize();
   session.start();
-  expect(session.getSnapshot().driving.speedLimit).toBe(60);
+  expect(session.getSnapshot().driving.speedLimit).toBe(30);
   driveToViolation(session);
 
   const first = session.getSnapshot().current!;
 
-  expect(first.causes[0].code).toBe('city-speed-limit');
-  expect(first.speed * 3.6).toBeGreaterThan(60);
-  expect(first.material).toBeNull();
-  expect(first.causes[0].referenceCheckedOn).toBe('2026-10-14');
+  expect(first.causes[0].code).toBe('speed-limit');
+  expect(first.speed * 3.6).toBeGreaterThan(30);
+  expect(first.causes[0].referenceCheckedOn).toBe('2026-10-18');
 
   const paused = session.getWorld();
 
@@ -89,7 +101,7 @@ it('runs city speeding through pause, retry, braking, rearming and persisted his
   expect(session.getSnapshot().history.violations).toHaveLength(2);
   session.setControls({ ...emptyControls(), brake: true });
 
-  while (session.getWorld().vehicle.speed >= 60 / 3.6) {
+  while (session.getWorld().vehicle.speed >= 30 / 3.6) {
     session.step();
   }
 
@@ -100,7 +112,7 @@ it('runs city speeding through pause, retry, braking, rearming and persisted his
   expect(repository.history.answers).toEqual([]);
   expect(repository.history.violations[0].causes[0]).toEqual(first.causes[0]);
   session.returnToRoad();
-  expect(session.getSnapshot().driving.speedLimit).toBe(60);
+  expect(session.getSnapshot().driving.speedLimit).toBe(30);
   expect(session.getSnapshot().driving.speedKmh).toBe(0);
 });
 

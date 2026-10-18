@@ -1,6 +1,6 @@
 {
   "name": "pdd-city",
-  "version": "0.2.0-preview.1",
+  "version": "0.3.0-preview.1",
   "private": true,
   "type": "module",
   "engines": {
@@ -15,19 +15,24 @@
     "test": "vitest run",
     "test:unit": "vitest run tests/unit",
     "test:integration": "vitest run tests/integration",
-    "test:e2e": "playwright test",
+    "test:e2e": "npm run test:e2e:legacy && npm run test:e2e:city",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint:code": "eslint . --max-warnings 0",
     "lint:styles": "stylelint \"src/**/*.css\" --max-warnings 0",
     "lint:fix": "eslint . --fix --max-warnings 0 && stylelint \"src/**/*.css\" --fix --max-warnings 0",
     "fix": "npm run lint:fix && npm run format",
-    "check": "npm run typecheck && npm run lint && npm run format:check && npm test"
+    "check": "npm run typecheck && npm run lint && npm run format:check && npm test",
+    "city:plan": "node scripts/generate-city-plan.mjs",
+    "test:e2e:city": "playwright test --config playwright.city.config.ts",
+    "test:e2e:legacy": "playwright test",
+    "test:performance": "playwright test --config playwright.performance.config.ts",
+    "postinstall": "patch-package"
   },
   "dependencies": {
     "@fontsource/manrope": "^5.3.0",
     "lucide-react": "^1.53.0",
-    "phaser": "^3.90.0",
+    "phaser": "3.90.0",
     "react": "^19.3.0",
     "react-dom": "^19.3.0"
   },
@@ -46,6 +51,7 @@
     "eslint-plugin-react-refresh": "^0.5.7",
     "fake-indexeddb": "^6.2.5",
     "globals": "^17.13.0",
+    "patch-package": "8.0.1",
     "prettier": "^3.9.9",
     "stylelint": "^17.16.0",
     "stylelint-config-standard": "^40.0.0",
