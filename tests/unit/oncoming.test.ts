@@ -67,10 +67,11 @@ describe('prohibited opposing lanes', () => {
     expect(second.events[0].episode).toBe(first.events[0].episode + 1);
   });
 
-  it('accepts every legal connection and its exit, including all left turns', () => {
-    const network = expandedCity.network!;
+  it.each(expandedCity.network!.connections)(
+    'accepts legal connection $id and its exit',
+    (connection) => {
+      const network = expandedCity.network!;
 
-    for (const connection of network.connections) {
       const lane = network.lanes.find((item) => item.id === connection.fromLaneId)!;
 
       const outgoing = network.lanes.find((item) => item.id === connection.toLaneId)!;
@@ -87,8 +88,8 @@ describe('prohibited opposing lanes', () => {
         expect(result.events, `${connection.id} at ${distance}`).toEqual([]);
         world = result.next;
       }
-    }
-  });
+    },
+  );
 
   it('rejects leaving the junction onto the opposite side but accepts the proper exit', () => {
     expect(move(starting(156.5, 148), { y: 140 }).events).toHaveLength(1);

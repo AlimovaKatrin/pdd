@@ -256,4 +256,6 @@ it('spawns only at unoccupied distant boundary entries and removes cars only at 
 
   expect(appeared).toBeGreaterThan(8);
   expect(removed).toBeGreaterThan(0);
-});
+
+  // This checks two simulated minutes, not a wall-clock performance budget.
+}, 30000);
