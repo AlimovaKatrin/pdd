@@ -1526,7 +1526,7 @@ kbd {
   grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
 }
 
-.participant-facts {
+.cause-facts {
   color: var(--color-text);
   font-size: 14px;
   line-height: 1.6;
