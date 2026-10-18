@@ -22,7 +22,8 @@
     "lint:styles": "stylelint \"src/**/*.css\" --max-warnings 0",
     "lint:fix": "eslint . --fix --max-warnings 0 && stylelint \"src/**/*.css\" --fix --max-warnings 0",
     "fix": "npm run lint:fix && npm run format",
-    "check": "npm run typecheck && npm run lint && npm run format:check && npm test"
+    "check": "npm run typecheck && npm run lint && npm run format:check && npm test",
+    "city:plan": "node scripts/generate-city-plan.mjs"
   },
   "dependencies": {
     "@fontsource/manrope": "^5.3.0",

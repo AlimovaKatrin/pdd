@@ -1,9 +1,9 @@
 import type { CauseCode, Question, RuleType } from '../learning/question-types';
 
-export interface Point {
-  x: number;
-  y: number;
-}
+import type { Point } from './point';
+import type { RoadNetwork } from './road-network';
+
+export type { Point } from './point';
 
 export interface Road {
   x: number;
@@ -24,6 +24,7 @@ export interface RoadMap {
   width: number;
   height: number;
   roads: Road[];
+  network?: RoadNetwork;
   stops: StopLine[];
   spawn: Point & { heading: number };
   citySpeedLimit: { id: string; limit: number };

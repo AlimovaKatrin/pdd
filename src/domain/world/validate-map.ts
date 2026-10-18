@@ -1,3 +1,4 @@
+import { validateNetwork } from './validate-network';
 import type { Point, RoadMap, StopLine } from './model';
 
 export function validateMap(map: RoadMap): RoadMap {
@@ -89,6 +90,8 @@ export function validateMap(map: RoadMap): RoadMap {
   ) {
     throw new Error('Invalid traffic configuration');
   }
+
+  validateNetwork(map);
 
   return map;
 }
