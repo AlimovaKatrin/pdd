@@ -8,6 +8,8 @@ export const ruleLabels: Record<RuleType, string> = {
   signal: 'Светофор',
   indicator: 'Поворотники',
   pedestrian: 'Пешеход',
+  priority: 'Приоритет',
+  oncoming: 'Встречная',
 };
 
 export const tripStatusLabels: Record<Trip['status'], string> = {

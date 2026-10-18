@@ -107,7 +107,7 @@ test('every cause has its own readable explanation and checked source without a 
 
   for (const entry of data.violations) {
     await page.locator(`[data-entry-id="${entry.id}"]`).click();
-    await expect(page.getByText(/Проверено: 2026-10-14/)).toBeVisible();
+    await expect(page.getByText(/Проверено: 2026-10-18/)).toBeVisible();
     await expect(
       page.getByRole('link', { name: `ПДД РФ · ${entry.causes[0].reference}`, exact: true }),
     ).toHaveAttribute('href', entry.causes[0].referenceUrl!);
@@ -388,7 +388,7 @@ test('a recorded city speed violation stays readable without raising the handlin
     'href',
     'https://www.consultant.ru/document/cons_doc_LAW_2709/803907f6876a655f77995888208488d4bfccf247/',
   );
-  await expect(page.getByText(/Проверено: 2026-10-14/)).toBeVisible();
+  await expect(page.getByText(/Проверено: 2026-10-18/)).toBeVisible();
   await expect(page.getByText(/Лимит: 60 км\/ч/)).toBeVisible();
 
   for (const [width, height] of [
@@ -407,7 +407,7 @@ test('a recorded city speed violation stays readable without raising the handlin
   await page.getByRole('button', { name: /^Журнал/ }).click();
   await page.getByRole('button', { name: /Превышение скорости в городе/ }).click();
   await expect(page.getByRole('link', { name: 'ПДД РФ · Пункт 10.2' })).toBeVisible();
-  await expect(page.getByText(/Проверено: 2026-10-14/)).toBeVisible();
+  await expect(page.getByText(/Проверено: 2026-10-18/)).toBeVisible();
 });
 
 test('pause and keyboard indicator toggle remain usable in a compact viewport', async ({

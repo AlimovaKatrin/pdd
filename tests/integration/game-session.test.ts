@@ -79,7 +79,7 @@ it('runs signed speeding through pause, retry, braking, rearming and persisted h
 
   expect(first.causes[0].code).toBe('speed-limit');
   expect(first.speed * 3.6).toBeGreaterThan(30);
-  expect(first.causes[0].referenceCheckedOn).toBe('2026-10-14');
+  expect(first.causes[0].referenceCheckedOn).toBe('2026-10-18');
 
   const paused = session.getWorld();
 
