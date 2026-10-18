@@ -1,3 +1,4 @@
+import { rotateCentralScene } from '../fixtures/rotate-central-scene';
 import { describe, expect, it } from 'vitest';
 import { expandedCity } from '../../src/content/maps/expanded-city';
 import { emptyControls, initialWorld } from '../../src/domain/world/model';
@@ -184,4 +185,20 @@ describe('green left-turn priority', () => {
     expect(approaching.junctionPassage?.episode).toBe(2);
     expect(approaching.junctionPassage?.reported).toEqual([]);
   });
+});
+
+it.each([0, 1, 2, 3])('detects the priority reaction from each rotated approach (%s)', (turns) => {
+  const world = rotateCentralScene(scene(), turns);
+
+  const result = stepWorld(world, emptyControls(), expandedCity);
+
+  expect(result.collision).toBeNull();
+  expect(result.violations.find((item) => item.type === 'priority')?.causes[0].code).toBe(
+    'priority-left-green',
+  );
+  expect(
+    stepWorld(result.world, emptyControls(), expandedCity).violations.filter(
+      (item) => item.type === 'priority',
+    ),
+  ).toEqual([]);
 });

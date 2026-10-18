@@ -123,7 +123,14 @@ export function initialWorld(map: RoadMap): World {
     pedestrians: Object.fromEntries(
       (map.crossings ?? []).map((c) => [
         c.id,
-        { progress: 0, waiting: 0, episode: 1, obstructed: false, reaction: null },
+        {
+          progress: 0,
+          waiting: c.initialWaitTicks ?? 0,
+          episode: 1,
+          obstructed: false,
+          reaction: null,
+          startedTick: null,
+        },
       ]),
     ),
     advisories: [],
@@ -254,11 +261,16 @@ export interface Maneuver {
 
 export interface Crossing {
   id: string;
+  label?: string;
   line: StopLine;
   from: Point;
   to: Point;
   speed: number;
   restartTicks: number;
+  initialWaitTicks?: number;
+  signalId?: string;
+  junctionId?: string;
+  outgoingLaneId?: string;
 }
 
 export interface PedestrianState {
@@ -267,4 +279,5 @@ export interface PedestrianState {
   episode: number;
   obstructed: boolean;
   reaction: 'vehicle' | null;
+  startedTick?: number | null;
 }

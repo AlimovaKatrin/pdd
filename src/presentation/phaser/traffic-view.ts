@@ -8,6 +8,7 @@ import type {
   World,
 } from '../../domain/world/model';
 import { signalColor } from '../../domain/world/traffic';
+import { pedestrianMayStart } from '../../domain/world/pedestrian-duty';
 import { PIXELS_PER_METER } from './city-drawing';
 
 const SIGNAL_LAMPS = [
@@ -29,6 +30,21 @@ export function drawTraffic(
 
   for (const crossing of map.crossings ?? []) {
     drawPedestrian(graphics, crossing, world.pedestrians[crossing.id]);
+
+    if (crossing.signalId) {
+      const green = pedestrianMayStart(crossing, map, world.tick);
+
+      const x = (crossing.from.x - 2) * PIXELS_PER_METER;
+
+      const y = (crossing.from.y - 2) * PIXELS_PER_METER;
+
+      graphics.fillStyle(0x263b33);
+      graphics.fillRoundedRect(x - 6, y - 12, 12, 26, 3);
+      graphics.fillStyle(green ? 0x51655b : 0xff574d);
+      graphics.fillCircle(x, y - 5, 4);
+      graphics.fillStyle(green ? 0x82d99a : 0x51655b);
+      graphics.fillCircle(x, y + 7, 4);
+    }
   }
 }
 

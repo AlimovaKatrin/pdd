@@ -4,6 +4,8 @@ import { CITY_STREETS, createCityNetwork } from './city-network';
 
 const network = createCityNetwork();
 
+const centralJunction = network.junctions.find((item) => item.control === 'signals')!;
+
 function approachLine(approach: JunctionApproach, id: string): StopLine {
   const lane = network.lanes.find((item) => item.id === approach.incomingLaneId)!;
 
@@ -31,7 +33,7 @@ const signedLane = network.lanes.find((lane) => lane.from.x === 54 && lane.from.
 signedLane.speedZoneIds.push('city-park-30');
 
 export const expandedCity: RoadMap = {
-  version: 'four-blocks-1',
+  version: 'four-blocks-2',
   width: 320,
   height: 320,
   roads: [
@@ -78,6 +80,25 @@ export const expandedCity: RoadMap = {
   ],
   crossings: [
     {
+      id: 'city-central-crossing',
+      label: 'П1',
+      line: {
+        id: 'city-central-yield',
+        a: { x: 153, y: 175 },
+        b: { x: 167, y: 175 },
+        direction: { x: 0, y: -1 },
+      },
+      from: { x: 153, y: 172 },
+      to: { x: 167, y: 172 },
+      speed: 1.2,
+      restartTicks: 600,
+      initialWaitTicks: 1400,
+      signalId: centralJunction.approaches.find((item) => item.side === 'east')!.signalId,
+      junctionId: centralJunction.id,
+      outgoingLaneId: centralJunction.approaches.find((item) => item.side === 'south')!
+        .outgoingLaneId,
+    },
+    {
       id: 'city-park-crossing',
       line: {
         id: 'city-park-yield',
@@ -97,3 +118,7 @@ network.junctions
   .find((junction) => junction.id === 'city-40-280')!
   .approaches.find((approach) => approach.side === 'north')!
   .crossingIds.push('city-park-crossing');
+
+centralJunction.approaches
+  .find((item) => item.side === 'south')!
+  .crossingIds.push('city-central-crossing');

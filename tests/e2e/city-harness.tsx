@@ -1,3 +1,4 @@
+import { signalPedestrianCity } from '../fixtures/signal-pedestrian-city';
 import { equalRoadCity } from '../fixtures/equal-road-city';
 import { mainRoadCity, priorityCity } from '../fixtures/priority-city';
 import type { Vehicle } from '../../src/domain/world/model';
@@ -33,6 +34,8 @@ let map = expandedCity;
 
 if (parameters.has('collision')) {
   map = { ...expandedCity, spawn: { x: 162, y: 43.5, heading: Math.PI } };
+} else if (parameters.has('signal-pedestrian')) {
+  map = signalPedestrianCity();
 } else if (parameters.has('equal-road')) {
   map = equalRoadCity();
 } else if (parameters.has('main-road')) {

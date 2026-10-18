@@ -40,11 +40,7 @@ export function checkPriority(
 
     const duty = junctionDuty(map, passage, before, previous.tick);
 
-    const control = map.network!.junctions.find((item) => item.id === passage.junctionId)!.control;
-
-    const enabled = duty === 'priority-left-green' || control !== 'signals';
-
-    if (!duty || !enabled || current.reported.includes(duty)) {
+    if (!duty || current.reported.includes(duty)) {
       continue;
     }
 
@@ -91,6 +87,9 @@ export function checkPriority(
           participantSignal:
             before.entrySignal ?? (signal ? signalColor(signal, previous.tick) : 'unregulated'),
           control: junction.control,
+          participantWasClearing: duty === 'priority-clearing',
+          playerEnteredTick: passage.enteredTick ?? 'unknown',
+          participantEnteredTick: before.enteredTick ?? 'unknown',
           participantSign: approach.sign ?? 'none',
           participantPriority: approach.priority,
           playerPriority: junction.approaches.find(

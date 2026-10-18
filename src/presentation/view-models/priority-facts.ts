@@ -48,6 +48,10 @@ export function formatPriorityFacts(facts: ReadonlyData<Cause['facts']>): string
     );
   }
 
+  if (facts.participantWasClearing === true) {
+    details.push(`${label} уже завершала проезд, когда для вашего подхода включился зелёный.`);
+  }
+
   if (
     facts.reaction === 'player-obstruction' &&
     typeof facts.actualSpeedKmh === 'number' &&

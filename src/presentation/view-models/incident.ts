@@ -49,7 +49,7 @@ export function formatCauseFacts(cause: ReadonlyData<Cause>) {
     case 'signal':
       return `Сигнал при пересечении: ${facts.signal === 'red' ? 'красный' : 'красный с жёлтым'}.`;
     case 'pedestrian':
-      return `Пешеход имел преимущество и был вынужден остановиться: ${String(facts.intendedSpeed)} → 0 м/с.`;
+      return `${typeof facts.participantLabel === 'string' ? facts.participantLabel : 'Пешеход'} имел преимущество и был вынужден остановиться: ${String(facts.intendedSpeed)} → 0 м/с.`;
 
     case 'priority':
       return formatPriorityFacts(facts);

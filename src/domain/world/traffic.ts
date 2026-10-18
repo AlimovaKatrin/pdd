@@ -42,3 +42,19 @@ export function activeSpeedLimit(map: ReadonlyData<RoadMap>, vehicle: Vehicle) {
 export function angleDifference(a: number, b: number) {
   return Math.atan2(Math.sin(a - b), Math.cos(a - b));
 }
+
+export function greenStartedAt(signal: TrafficSignal, tick: number): number | null {
+  const cycle = signal.phases.reduce((total, phase) => total + phase.ticks, 0);
+
+  let elapsed = (((tick + signal.offset) % cycle) + cycle) % cycle;
+
+  for (const phase of signal.phases) {
+    if (elapsed < phase.ticks) {
+      return phase.color === 'green' ? tick - elapsed : null;
+    }
+
+    elapsed -= phase.ticks;
+  }
+
+  return null;
+}

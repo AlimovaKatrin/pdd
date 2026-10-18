@@ -1,28 +1,12 @@
 import type { CauseCode } from '../learning/question';
-import type { RoadMap, SignalColor, TrafficSignal } from './model';
+import type { RoadMap, SignalColor } from './model';
 import { compareJunctionPaths } from './junction-priority';
-import { signalColor } from './traffic';
+import { greenStartedAt, signalColor } from './traffic';
 
 export interface JunctionParticipant {
   connectionId: string;
   enteredTick: number | null;
   entrySignal: SignalColor | null;
-}
-
-function greenStartedAt(signal: TrafficSignal, tick: number): number | null {
-  const cycle = signal.phases.reduce((total, phase) => total + phase.ticks, 0);
-
-  let elapsed = (((tick + signal.offset) % cycle) + cycle) % cycle;
-
-  for (const phase of signal.phases) {
-    if (elapsed < phase.ticks) {
-      return phase.color === 'green' ? tick - elapsed : null;
-    }
-
-    elapsed -= phase.ticks;
-  }
-
-  return null;
 }
 
 /** The duty is shared by traffic and player detection; it does not itself prove obstruction. */
@@ -64,13 +48,8 @@ export function junctionDuty(
     const secondColor =
       second.enteredTick === null ? signalColor(signalB, tick) : second.entrySignal;
 
-    // Yellow exceptions are not classified by this preview.
-    if (firstColor !== 'green' || secondColor !== 'green') {
+    if (firstColor !== 'green') {
       return null;
-    }
-
-    if (relation.yields === 'first' && relation.reference === '13.4') {
-      return 'priority-left-green';
     }
 
     const started = greenStartedAt(signalA, tick);
@@ -82,6 +61,10 @@ export function junctionDuty(
       (first.enteredTick === null || first.enteredTick >= started)
     ) {
       return 'priority-clearing';
+    }
+
+    if (secondColor === 'green' && relation.yields === 'first' && relation.reference === '13.4') {
+      return 'priority-left-green';
     }
 
     return null;

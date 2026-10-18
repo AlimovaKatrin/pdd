@@ -1,3 +1,4 @@
+import { pedestrianMayStart } from '../world/pedestrian-duty';
 import { predictsPlayerConflict } from './traffic-conflict';
 import { speedForTrafficPath } from './traffic-speed';
 import type { RoadMap, World, Vehicle } from '../world/model';
@@ -186,7 +187,11 @@ export function stepTrafficCar(
   for (const crossing of map.crossings ?? []) {
     const pedestrian = world.pedestrians[crossing.id];
 
-    if (!pedestrian || pedestrian.waiting > 0) {
+    if (
+      !pedestrian ||
+      pedestrian.waiting > 0 ||
+      (pedestrian.progress === 0 && !pedestrianMayStart(crossing, map, world.tick))
+    ) {
       continue;
     }
 

@@ -1,5 +1,30 @@
 import { expect, test, type Page } from '@playwright/test';
-import { driveAcrossUnregulatedRoad, driveLeftAtGreen } from './priority-driving';
+import {
+  driveAcrossUnregulatedRoad,
+  driveLeftAtGreen,
+  drivePastSignalPedestrian,
+} from './priority-driving';
+
+test('new green still requires yielding to the pedestrian finishing the crossing', async ({
+  page,
+}) => {
+  test.setTimeout(100000);
+  await page.setViewportSize({ width: 1024, height: 650 });
+  await page.goto('/tests/e2e/city-harness.html?signal-pedestrian');
+  await page.getByRole('button', { name: 'Поехать в город', exact: true }).click();
+  await drivePastSignalPedestrian(page, false);
+
+  const dialog = page.getByRole('dialog', { name: 'Разбор нарушения', exact: true });
+
+  await expect(dialog.getByText('Не дали пешеходу закончить переход')).toBeVisible();
+  await expect(dialog.getByText(/П1 имел преимущество/)).toBeVisible();
+  await page.screenshot({ path: 'test-results/signal-pedestrian.png' });
+  await dialog.getByRole('button', { name: 'Повторить ситуацию', exact: true }).click();
+  await drivePastSignalPedestrian(page, true);
+  await expect(dialog).not.toBeVisible();
+  expect(await page.evaluate(() => window.cityTest.pose().y)).toBeLessThan(164);
+  expect(await page.evaluate(() => window.cityTest.snapshot().history.violations.length)).toBe(1);
+});
 
 test('equal road explains right-side priority and permits yielding on retry', async ({ page }) => {
   test.setTimeout(90000);
