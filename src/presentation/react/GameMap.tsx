@@ -2,10 +2,11 @@ import { useEffect, useRef } from 'react';
 import { ArrowUpRight, MapPin } from 'lucide-react';
 
 interface GameMapProps {
+  expanded?: boolean;
   mountWorld: (parent: HTMLElement) => () => void;
 }
 
-export function GameMap({ mountWorld }: GameMapProps) {
+export function GameMap({ mountWorld, expanded = false }: GameMapProps) {
   const scene = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -25,7 +26,7 @@ export function GameMap({ mountWorld }: GameMapProps) {
       <div className="map-label">
         <MapPin size={16} />
         <div>
-          <strong>Садовый квартал</strong>
+          <strong>{expanded ? 'Четыре квартала' : 'Садовый квартал'}</strong>
           <span>Небольшой город · без спешки</span>
         </div>
       </div>

@@ -15,7 +15,7 @@
     "test": "vitest run",
     "test:unit": "vitest run tests/unit",
     "test:integration": "vitest run tests/integration",
-    "test:e2e": "playwright test",
+    "test:e2e": "npm run test:e2e:legacy && npm run test:e2e:city",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint:code": "eslint . --max-warnings 0",
@@ -23,7 +23,9 @@
     "lint:fix": "eslint . --fix --max-warnings 0 && stylelint \"src/**/*.css\" --fix --max-warnings 0",
     "fix": "npm run lint:fix && npm run format",
     "check": "npm run typecheck && npm run lint && npm run format:check && npm test",
-    "city:plan": "node scripts/generate-city-plan.mjs"
+    "city:plan": "node scripts/generate-city-plan.mjs",
+    "test:e2e:city": "playwright test --config playwright.city.config.ts",
+    "test:e2e:legacy": "playwright test"
   },
   "dependencies": {
     "@fontsource/manrope": "^5.3.0",

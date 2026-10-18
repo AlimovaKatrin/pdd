@@ -16,7 +16,15 @@ function PauseCard({ onResume }: { onResume: () => void }) {
   );
 }
 
-function WelcomeCard({ ready, onStart }: { ready: boolean; onStart: () => void }) {
+function WelcomeCard({
+  ready,
+  onStart,
+  expanded,
+}: {
+  ready: boolean;
+  onStart: () => void;
+  expanded: boolean;
+}) {
   return (
     <div className="welcome">
       <span className="welcome-icon">
@@ -24,8 +32,9 @@ function WelcomeCard({ ready, onStart }: { ready: boolean; onStart: () => void }
       </span>
       <h2>Хорошее место для первой поездки</h2>
       <p>
-        Впереди знак STOP. Попробуйте остановиться перед линией — или узнайте, что случится, если
-        проехать.
+        {expanded
+          ? 'Исследуйте четыре квартала. Впереди центральный светофор, по соседним улицам можно объехать город.'
+          : 'Впереди знак STOP. Попробуйте остановиться перед линией — или узнайте, что случится, если проехать.'}
       </p>
       <button className="primary" disabled={!ready} onClick={onStart}>
         <Play size={17} />
@@ -34,7 +43,9 @@ function WelcomeCard({ ready, onStart }: { ready: boolean; onStart: () => void }
       </button>
       <span className="desktop-note">Клавиатура · Chrome/Edge · окно от 1024×650</span>
       <span className="desktop-note">
-        Пять групп правил, без других машин. Это не полный экзамен ПДД.
+        {expanded
+          ? 'Предпросмотр расширенного города. Это не полный экзамен ПДД.'
+          : 'Пять групп правил, без других машин. Это не полный экзамен ПДД.'}
       </span>
     </div>
   );
@@ -53,7 +64,11 @@ export function TripOverlays({ state, session, runAndFocusRoad }: TripOverlaysPr
     <>
       {showPause && <PauseCard onResume={() => runAndFocusRoad(() => session.resume())} />}
       {!state.started && (
-        <WelcomeCard ready={state.ready} onStart={() => runAndFocusRoad(() => session.start())} />
+        <WelcomeCard
+          expanded={!!session.map.network}
+          ready={state.ready}
+          onStart={() => runAndFocusRoad(() => session.start())}
+        />
       )}
       {state.current && (
         <Incident key={state.current.id} state={state} session={session} act={runAndFocusRoad} />

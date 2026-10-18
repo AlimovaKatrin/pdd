@@ -57,11 +57,11 @@ export function App({ session, mountWorld }: AppProps) {
         </div>
         <div className="game-layout">
           <div className="driving-area">
-            <GameMap mountWorld={mountWorld} />
+            <GameMap mountWorld={mountWorld} expanded={!!session.map.network} />
             <Dashboard state={state} session={session} act={runAndFocusRoad} />
           </div>
           <aside className="sidebar">
-            <CityGuide />
+            <CityGuide expanded={!!session.map.network} />
             <DrivingHelp />
             <TripProgress
               successfulManeuvers={state.driving.successfulManeuvers}

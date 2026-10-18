@@ -39,10 +39,18 @@ const TOPICS = [
   },
 ];
 
-export function CityGuide() {
+export function CityGuide({ expanded = false }: { expanded?: boolean }) {
   const [selected, setSelected] = useState(0);
 
   const topic = TOPICS[selected];
+
+  const expandedLocations = [
+    'Главная улица: STOP на южных подходах',
+    'Северная улица между садом и мастерскими, на восток',
+    'Центральный перекрёсток, к северу от старта',
+    'На любом перекрёстке города',
+    'Западная улица, рядом с парком',
+  ];
 
   return (
     <section className="lesson-card" aria-labelledby="city-guide-title">
@@ -69,7 +77,7 @@ export function CityGuide() {
         <h2>{topic.title}</h2>
         <p className="guide-location">
           <MapPin size={14} aria-hidden="true" />
-          {topic.location}
+          {expanded ? expandedLocations[selected] : topic.location}
         </p>
         <p className="guide-hint">{topic.hint}</p>
       </div>

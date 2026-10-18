@@ -58,9 +58,17 @@ function drawTrafficSignal(
 ) {
   const color = signalColor(signal, tick);
 
-  const x = signal.line.b.x * PIXELS_PER_METER + 12;
+  const right = { x: -signal.line.direction.y, y: signal.line.direction.x };
 
-  const y = signal.line.b.y * PIXELS_PER_METER;
+  const endpoint =
+    signal.line.a.x * right.x + signal.line.a.y * right.y >
+    signal.line.b.x * right.x + signal.line.b.y * right.y
+      ? signal.line.a
+      : signal.line.b;
+
+  const x = (endpoint.x + right.x * 1.8) * PIXELS_PER_METER;
+
+  const y = (endpoint.y + right.y * 1.8) * PIXELS_PER_METER;
 
   graphics.fillStyle(0x263b33);
   graphics.fillRoundedRect(x - 7, y - 22, 14, 44, 5);
