@@ -1,7 +1,7 @@
 import type { Vehicle } from '../../src/domain/world/model';
 import { createRoot } from 'react-dom/client';
 import { expandedCity } from '../../src/content/maps/expanded-city';
-import { GameSession } from '../../src/use-cases/session/game-session';
+import { GameSession, type SessionSnapshot } from '../../src/use-cases/session/game-session';
 import { IndexedDbHistory } from '../../src/adapters/persistence/indexed-db';
 import { localContent } from '../../src/adapters/content/local';
 import { bindKeyboard } from '../../src/adapters/input/keyboard';
@@ -15,11 +15,21 @@ import '@fontsource/manrope/cyrillic-700.css';
 
 declare global {
   interface Window {
-    cityTest: { pose: () => Readonly<Vehicle>; pause: () => void; returnToRoad: () => void };
+    cityTest: {
+      pose: () => Readonly<Vehicle>;
+      world: GameSession['getWorld'];
+      snapshot: () => SessionSnapshot;
+      pause: () => void;
+      returnToRoad: () => void;
+    };
   }
 }
 
-const session = new GameSession(expandedCity, new IndexedDbHistory(), localContent, {
+const map = new URLSearchParams(location.search).has('collision')
+  ? { ...expandedCity, spawn: { x: 162, y: 43.5, heading: Math.PI } }
+  : expandedCity;
+
+const session = new GameSession(map, new IndexedDbHistory(), localContent, {
   id: () => crypto.randomUUID(),
   date: () => new Date().toISOString(),
 });
@@ -34,6 +44,8 @@ void session.initialize();
 // A read-only test fixture, served by Vite only from tests/. Not part of the production entry.
 window.cityTest = {
   pose: () => session.getWorld().vehicle,
+  world: () => session.getWorld(),
+  snapshot: () => session.getSnapshot(),
   pause: () => session.pause('manual'),
   returnToRoad: () => session.returnToRoad(),
 };

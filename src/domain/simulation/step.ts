@@ -1,3 +1,5 @@
+import { stopAtContact } from './stop-at-contact';
+import { detectCollision, type Collision } from './collision';
 import { stepTraffic } from './traffic';
 import { checkTurn } from '../maneuvers/turn';
 import { updateDrivingProgress } from './driving-progress';
@@ -19,7 +21,7 @@ export function stepWorld(
   world: World,
   controls: Controls,
   map: RoadMap,
-): { world: World; violations: DetectedViolation[] } {
+): { world: World; violations: DetectedViolation[]; collision: Collision | null } {
   const v = { ...world.vehicle };
 
   if (controls.brake || (controls.throttle && controls.reverse)) {
@@ -68,6 +70,14 @@ export function stepWorld(
     advisories: world.tick < world.advisoryUntil ? world.advisories : [],
   };
 
+  stepTraffic(world, next, map, STEP);
+
+  const collision = detectCollision(world, next);
+
+  if (collision) {
+    stopAtContact(world, next, map, collision.fraction);
+  }
+
   const violations: DetectedViolation[] = [];
 
   for (const line of map.stops) {
@@ -93,8 +103,11 @@ export function stepWorld(
     ...checkTurn(world, next, map),
     ...stepPedestrians(world, next, map, STEP),
   );
-  stepTraffic(world, next, map, STEP);
   updateDrivingProgress(world, next, map, violations);
 
-  return { world: next, violations };
+  if (collision) {
+    v.speed = 0;
+  }
+
+  return { world: next, violations, collision };
 }

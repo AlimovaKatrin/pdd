@@ -78,7 +78,12 @@ export function mountCity(parent: HTMLElement, session: GameSession) {
       this.vehicle.update(world.vehicle, world.tick);
 
       if (session.map.network) {
-        const target = { x: world.vehicle.x, y: world.vehicle.y, tick: world.tick };
+        const target = {
+          x: world.vehicle.x,
+          y: world.vehicle.y,
+          tick: world.tick,
+          relocation: world.relocation,
+        };
 
         this.cameraCentre = {
           ...this.cameraCentre,

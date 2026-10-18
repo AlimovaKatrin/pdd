@@ -1,3 +1,4 @@
+import { CollisionCard } from './CollisionCard';
 import { ArrowRight, Leaf, Pause, Play } from 'lucide-react';
 import type { GameSession, SessionSnapshot } from '../../use-cases/session/game-session';
 import { Incident } from './Incident';
@@ -58,7 +59,12 @@ interface TripOverlaysProps {
 }
 
 export function TripOverlays({ state, session, runAndFocusRoad }: TripOverlaysProps) {
-  const showPause = state.started && state.pauses.length > 0 && !state.current && !state.journal;
+  const showPause =
+    state.started &&
+    state.pauses.length > 0 &&
+    !state.current &&
+    !state.journal &&
+    !state.collision;
 
   return (
     <>
@@ -70,10 +76,13 @@ export function TripOverlays({ state, session, runAndFocusRoad }: TripOverlaysPr
           onStart={() => runAndFocusRoad(() => session.start())}
         />
       )}
-      {state.current && (
+      {state.collision && <CollisionCard state={state} session={session} act={runAndFocusRoad} />}
+      {state.current && !state.collision && (
         <Incident key={state.current.id} state={state} session={session} act={runAndFocusRoad} />
       )}
-      {state.journal && <Journal state={state} session={session} act={runAndFocusRoad} />}
+      {state.journal && !state.collision && (
+        <Journal state={state} session={session} act={runAndFocusRoad} />
+      )}
     </>
   );
 }

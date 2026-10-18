@@ -2,6 +2,7 @@ import type { Point } from '../../domain/world/model';
 
 export interface CameraTarget extends Point {
   tick: number;
+  relocation?: number;
 }
 
 /** Presentation only: deterministic smoothing uses simulation time and freezes with it. */
@@ -12,6 +13,7 @@ export function nextCameraCentre(
 ): Point {
   if (
     !previous ||
+    target.relocation !== previous.relocation ||
     target.tick < previous.tick ||
     Math.hypot(target.x - previous.x, target.y - previous.y) > 8
   ) {

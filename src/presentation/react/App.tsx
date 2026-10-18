@@ -27,9 +27,9 @@ export function App({ session, mountWorld }: AppProps) {
   const runAndFocusRoad = (action: () => void) => {
     action();
 
-    const { journal, current } = session.getSnapshot();
+    const { journal, current, collision } = session.getSnapshot();
 
-    if (journal || current) {
+    if (journal || current || collision) {
       return;
     }
 

@@ -74,7 +74,11 @@ test('keyboard route crosses a junction, turns around a block and returns with t
       await page.getByRole('button', { name: 'Продолжить', exact: true }).click();
     }
 
-    const pose = await page.evaluate(() => window.cityTest.pose());
+    await expect(page.getByRole('dialog', { name: 'Столкновение', exact: true })).not.toBeVisible();
+
+    const world = await page.evaluate(() => window.cityTest.world());
+
+    const pose = world.vehicle;
 
     const [x, y] = points[target];
 
@@ -88,7 +92,19 @@ test('keyboard route crosses a junction, turns around a block and returns with t
 
     const angle = Math.atan2(Math.sin(desired - pose.heading), Math.cos(desired - pose.heading));
 
-    const keys = new Set([pose.speed > 6 ? 'Space' : 'KeyW']);
+    const blocked = world.traffic.vehicles.some(({ vehicle }) => {
+      const dx = vehicle.x - pose.x;
+
+      const dy = vehicle.y - pose.y;
+
+      const ahead = dx * Math.cos(pose.heading) + dy * Math.sin(pose.heading);
+
+      const lateral = -dx * Math.sin(pose.heading) + dy * Math.cos(pose.heading);
+
+      return ahead > 0 && ahead < 12 && Math.abs(lateral) < 2.5;
+    });
+
+    const keys = new Set([blocked || pose.speed > 6 ? 'Space' : 'KeyW']);
 
     if (Math.abs(angle) > 0.06) {
       keys.add(angle > 0 ? 'KeyD' : 'KeyA');
@@ -167,23 +183,121 @@ for (const [width, height] of [
   });
 }
 
-test('safe return snaps the camera to the restored location and preserves another pause', async ({
+test('safe return snaps the camera while retaining the traffic and another pause', async ({
   page,
 }) => {
   await page.goto('/tests/e2e/city-harness.html');
   await expect(page.locator('canvas')).toBeVisible();
-
-  const initial = await canvasPixels(page);
-
   await page.getByRole('button', { name: 'Поехать в город', exact: true }).click();
   await page.keyboard.down('KeyW');
   await page.waitForTimeout(1800);
   await page.keyboard.up('KeyW');
-  await page.evaluate(() => {
+
+  const before = await page.evaluate(() => {
     window.cityTest.pause();
-    window.cityTest.returnToRoad();
+
+    return window.cityTest.world();
   });
+
+  await page.evaluate(() => window.cityTest.returnToRoad());
   await expect(page.getByText('Небольшая остановка')).toBeVisible();
+
+  const returned = await page.evaluate(() => window.cityTest.world());
+
+  expect(returned.traffic).toEqual(before.traffic);
+  expect(returned.tick).toBe(before.tick);
+  expect(returned.vehicle.speed).toBe(0);
   await page.waitForTimeout(100);
-  expect((await canvasPixels(page)) === initial).toBe(true);
+
+  const centre = await page.locator('canvas').evaluate((canvas: HTMLCanvasElement) => {
+    const pixels = canvas.getContext('2d')!.getImageData(0, 0, canvas.width, canvas.height).data;
+
+    let x = 0;
+
+    let y = 0;
+
+    let count = 0;
+
+    for (let offset = 0; offset < pixels.length; offset += 4) {
+      if (pixels[offset] === 52 && pixels[offset + 1] === 120 && pixels[offset + 2] === 196) {
+        x += (offset / 4) % canvas.width;
+        y += Math.floor(offset / 4 / canvas.width);
+        count++;
+      }
+    }
+
+    return { x: x / count - canvas.width / 2, y: y / count - canvas.height / 2 };
+  });
+
+  expect(Math.abs(centre.x)).toBeLessThan(5);
+  expect(Math.abs(centre.y)).toBeLessThan(5);
+
+  const pixels = await canvasPixels(page);
+
+  await page.waitForTimeout(200);
+  expect(await canvasPixels(page)).toBe(pixels);
 });
+
+for (const [width, height] of [
+  [1280, 720],
+  [1024, 650],
+]) {
+  test(`collision stops the city and offers a safe return at ${width}x${height}`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height });
+    await page.goto('/tests/e2e/city-harness.html?collision');
+    await page.getByRole('button', { name: 'Поехать в город', exact: true }).click();
+    await page.keyboard.down('KeyW');
+    await expect(page.getByRole('dialog', { name: 'Разбор нарушения' })).toBeVisible({
+      timeout: 10000,
+    });
+    await page.keyboard.up('KeyW');
+    await page.getByRole('button', { name: 'Продолжить', exact: true }).click();
+    await page.keyboard.down('KeyW');
+
+    const dialog = page.getByRole('dialog', { name: 'Столкновение', exact: true });
+
+    await expect(dialog).toBeVisible({ timeout: 10000 });
+    await page.keyboard.up('KeyW');
+    await expect(dialog.getByText('М1:', { exact: true })).toBeVisible();
+    await expect(dialog.getByRole('button', { name: 'Повторить ситуацию' })).toHaveCount(0);
+
+    const before = await page.evaluate(() => ({
+      world: window.cityTest.world(),
+      snapshot: window.cityTest.snapshot(),
+    }));
+
+    await page.waitForTimeout(200);
+    expect(await page.evaluate(() => window.cityTest.world())).toEqual(before.world);
+    expect(
+      await dialog.evaluate((element) => {
+        const bounds = element.getBoundingClientRect();
+
+        return (
+          bounds.top >= 0 &&
+          bounds.bottom <= innerHeight &&
+          element.scrollHeight <= element.clientHeight
+        );
+      }),
+    ).toBe(true);
+    await page.screenshot({ path: `test-results/collision-${width}.png` });
+    await page.evaluate(() => window.cityTest.pause());
+    await dialog.getByRole('button', { name: 'Вернуться на дорогу' }).click();
+    await expect(dialog).not.toBeVisible();
+    await expect(page.getByTestId('speed')).toHaveText('00');
+
+    const after = await page.evaluate(() => ({
+      world: window.cityTest.world(),
+      snapshot: window.cityTest.snapshot(),
+    }));
+
+    expect(after.snapshot.activeTripId).toBe(before.snapshot.activeTripId);
+    expect(after.snapshot.history.violations).toEqual(before.snapshot.history.violations);
+    expect(after.world.traffic).toEqual(before.world.traffic);
+    await page.getByRole('button', { name: 'Продолжить поездку', exact: true }).click();
+    await page.waitForTimeout(1500);
+    await expect(dialog).not.toBeVisible();
+    await expect(page.getByTestId('speed')).toHaveText('00');
+  });
+}

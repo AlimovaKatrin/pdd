@@ -49,6 +49,7 @@ export interface StopEpisode {
 
 export interface World {
   tick: number;
+  relocation: number;
   vehicle: Vehicle;
   traffic: TrafficState;
   stops: Record<string, StopEpisode>;
@@ -83,6 +84,7 @@ export const emptyControls = (): Controls => ({
 export function initialWorld(map: RoadMap): World {
   return {
     tick: 0,
+    relocation: 0,
     traffic: createTraffic(map.network, map.spawn),
     vehicle: { ...map.spawn, speed: 0, indicator: null, indicatorTurn: 0 },
     stops: Object.fromEntries(

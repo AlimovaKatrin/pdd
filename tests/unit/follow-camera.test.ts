@@ -19,3 +19,13 @@ it('follows smoothly, freezes with simulation time and snaps on return or rewind
   });
   expect(nextCameraCentre(followed, after, { ...centre, tick: 0 })).toEqual(centre);
 });
+
+it('snaps a short relocation even when simulation time has not advanced', () => {
+  expect(
+    nextCameraCentre(
+      { x: 10, y: 10 },
+      { x: 10, y: 10, tick: 60, relocation: 0 },
+      { x: 12, y: 10, tick: 60, relocation: 1 },
+    ),
+  ).toEqual({ x: 12, y: 10 });
+});
