@@ -42,7 +42,7 @@ export function checkPriority(
 
     const control = map.network!.junctions.find((item) => item.id === passage.junctionId)!.control;
 
-    const enabled = duty === 'priority-left-green' || control === 'priority';
+    const enabled = duty === 'priority-left-green' || control !== 'signals';
 
     if (!duty || !enabled || current.reported.includes(duty)) {
       continue;

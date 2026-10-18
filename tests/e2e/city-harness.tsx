@@ -1,3 +1,4 @@
+import { equalRoadCity } from '../fixtures/equal-road-city';
 import { mainRoadCity, priorityCity } from '../fixtures/priority-city';
 import type { Vehicle } from '../../src/domain/world/model';
 import { createRoot } from 'react-dom/client';
@@ -32,6 +33,8 @@ let map = expandedCity;
 
 if (parameters.has('collision')) {
   map = { ...expandedCity, spawn: { x: 162, y: 43.5, heading: Math.PI } };
+} else if (parameters.has('equal-road')) {
+  map = equalRoadCity();
 } else if (parameters.has('main-road')) {
   map = mainRoadCity();
 } else if (parameters.has('priority')) {

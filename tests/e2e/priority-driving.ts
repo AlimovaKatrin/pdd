@@ -79,7 +79,11 @@ export async function driveLeftAtGreen(page: Page, yieldFirst: boolean) {
   }
 }
 
-export async function driveAcrossMainRoad(page: Page, yieldFirst: boolean) {
+export async function driveAcrossUnregulatedRoad(
+  page: Page,
+  yieldFirst: boolean,
+  direction: 'south' | 'east',
+) {
   let held = new Set<string>();
 
   for (let iteration = 0; iteration < 1000; iteration++) {
@@ -89,11 +93,17 @@ export async function driveAcrossMainRoad(page: Page, yieldFirst: boolean) {
 
     expect(snapshot.collision).toBeNull();
 
-    if (snapshot.current || world.vehicle.y > 60) {
+    const progress = direction === 'south' ? world.vehicle.y : world.vehicle.x;
+
+    const exit = direction === 'south' ? 60 : 300;
+
+    const waitBefore = direction === 'south' ? 19 : 259;
+
+    if (snapshot.current || progress > exit) {
       break;
     }
 
-    const waiting = yieldFirst && world.tick < 850 && world.vehicle.y > 19;
+    const waiting = yieldFirst && world.tick < 850 && progress > waitBefore;
 
     const keys = new Set<string>();
 

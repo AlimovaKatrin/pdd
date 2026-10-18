@@ -1,5 +1,26 @@
 import { expect, test, type Page } from '@playwright/test';
-import { driveAcrossMainRoad, driveLeftAtGreen } from './priority-driving';
+import { driveAcrossUnregulatedRoad, driveLeftAtGreen } from './priority-driving';
+
+test('equal road explains right-side priority and permits yielding on retry', async ({ page }) => {
+  test.setTimeout(90000);
+  await page.setViewportSize({ width: 1024, height: 650 });
+  await page.goto('/tests/e2e/city-harness.html?equal-road');
+  await page.getByRole('button', { name: 'Поехать в город', exact: true }).click();
+  await driveAcrossUnregulatedRoad(page, false, 'east');
+
+  const dialog = page.getByRole('dialog', { name: 'Разбор нарушения', exact: true });
+
+  await expect(
+    dialog.getByRole('link', { name: 'ПДД РФ · Пункты 13.10, 13.11', exact: true }),
+  ).toBeVisible();
+  await expect(dialog.getByText(/М1: с юга, прямо/)).toBeVisible();
+  await page.screenshot({ path: 'test-results/equal-road.png' });
+  await dialog.getByRole('button', { name: 'Повторить ситуацию', exact: true }).click();
+  await driveAcrossUnregulatedRoad(page, true, 'east');
+  await expect(dialog).not.toBeVisible();
+  expect(await page.evaluate(() => window.cityTest.pose().x)).toBeGreaterThan(300);
+  expect(await page.evaluate(() => window.cityTest.snapshot().history.violations.length)).toBe(1);
+});
 
 test('secondary road explains the main-road priority and supports a corrected retry', async ({
   page,
@@ -8,7 +29,7 @@ test('secondary road explains the main-road priority and supports a corrected re
   await page.setViewportSize({ width: 1024, height: 650 });
   await page.goto('/tests/e2e/city-harness.html?main-road');
   await page.getByRole('button', { name: 'Поехать в город', exact: true }).click();
-  await driveAcrossMainRoad(page, false);
+  await driveAcrossUnregulatedRoad(page, false, 'south');
 
   const dialog = page.getByRole('dialog', { name: 'Разбор нарушения', exact: true });
 
@@ -18,7 +39,7 @@ test('secondary road explains the main-road priority and supports a corrected re
   await expect(dialog.getByText(/Ваша дорога — второстепенная, дорога М1 — главная/)).toBeVisible();
   await page.screenshot({ path: 'test-results/main-road.png' });
   await dialog.getByRole('button', { name: 'Повторить ситуацию', exact: true }).click();
-  await driveAcrossMainRoad(page, true);
+  await driveAcrossUnregulatedRoad(page, true, 'south');
   await expect(dialog).not.toBeVisible();
   expect(await page.evaluate(() => window.cityTest.pose().y)).toBeGreaterThan(60);
   expect(await page.evaluate(() => window.cityTest.snapshot().history.violations.length)).toBe(1);
