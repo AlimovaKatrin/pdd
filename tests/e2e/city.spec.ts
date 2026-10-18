@@ -9,6 +9,72 @@ async function canvasPixels(page: Page) {
   });
 }
 
+test('releasing a driving brake cannot activate the newly focused dialog button', async ({
+  page,
+}) => {
+  await page.goto('/tests/e2e/city-harness.html');
+  await page.getByRole('button', { name: 'Поехать в город', exact: true }).click();
+  await page.keyboard.down('Space');
+  await page.evaluate(() => window.cityTest.pause());
+  await expect(page.getByText('Небольшая остановка')).toBeVisible();
+  await page.getByRole('button', { name: 'Продолжить поездку', exact: true }).focus();
+  // An OS key repeat can arrive after focus moves, while the original brake is still held.
+  await page.keyboard.down('Space');
+  await page.keyboard.up('Space');
+  await expect(page.getByText('Небольшая остановка')).toBeVisible();
+  await page.keyboard.press('Space');
+  await expect(page.getByText('Небольшая остановка')).not.toBeVisible();
+});
+
+for (const [width, height] of [
+  [1024, 650],
+  [700, 700],
+]) {
+  test(`opposing-lane review, correction and saved history at ${width}x${height}`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height });
+    await page.goto('/tests/e2e/city-harness.html');
+    await page.getByRole('button', { name: 'Поехать в город', exact: true }).click();
+    await page.keyboard.down('KeyW');
+    await page.keyboard.down('KeyA');
+
+    const dialog = page.getByRole('dialog', { name: 'Разбор нарушения', exact: true });
+
+    await expect(dialog).toBeVisible({ timeout: 10000 });
+    await page.keyboard.up('KeyW');
+    await page.keyboard.up('KeyA');
+    await expect(dialog.getByText('Движение по запрещённой встречной полосе')).toBeVisible();
+    await expect(dialog.getByRole('link', { name: /Пункт 9.1/ })).toBeVisible();
+    expect(
+      await dialog.evaluate((element) => {
+        const bounds = element.getBoundingClientRect();
+
+        return (
+          bounds.top >= 0 &&
+          bounds.bottom <= innerHeight &&
+          element.scrollHeight <= element.clientHeight
+        );
+      }),
+    ).toBe(true);
+    await page.screenshot({ path: `test-results/oncoming-${width}.png` });
+    await dialog.getByRole('button', { name: 'Повторить ситуацию', exact: true }).click();
+    await page.keyboard.down('KeyW');
+    await page.waitForTimeout(1500);
+    await page.keyboard.up('KeyW');
+    await expect(dialog).not.toBeVisible();
+    expect(await page.evaluate(() => window.cityTest.snapshot().history.violations.length)).toBe(1);
+    await page.reload();
+    await page.getByRole('button', { name: 'Поехать в город', exact: true }).click();
+    await page.getByRole('button', { name: /Журнал/ }).click();
+    await page.getByRole('button', { name: /Движение по запрещённой встречной полосе/ }).click();
+    await expect(dialog.getByRole('link', { name: /Пункт 9.1/ })).toBeVisible();
+    await expect(
+      dialog.getByRole('button', { name: 'Повторить ситуацию', exact: true }),
+    ).toHaveCount(0);
+  });
+}
+
 test('expanded city follows real driving, freezes during pause, and resets on restart', async ({
   page,
 }) => {
@@ -71,7 +137,11 @@ test('keyboard route crosses a junction, turns around a block and returns with t
       }
 
       held.clear();
-      await page.getByRole('button', { name: 'Продолжить', exact: true }).click();
+
+      // Releasing a key pressed after the dialog appeared may legitimately activate its button.
+      if (await page.getByRole('dialog', { name: 'Разбор нарушения' }).isVisible()) {
+        await page.getByRole('button', { name: 'Продолжить', exact: true }).click();
+      }
     }
 
     await expect(page.getByRole('dialog', { name: 'Столкновение', exact: true })).not.toBeVisible();
@@ -248,6 +318,14 @@ for (const [width, height] of [
     await page.setViewportSize({ width, height });
     await page.goto('/tests/e2e/city-harness.html?collision');
     await page.getByRole('button', { name: 'Поехать в город', exact: true }).click();
+    await page.keyboard.down('KeyW');
+
+    const oncoming = page.getByRole('dialog', { name: 'Разбор нарушения', exact: true });
+
+    await expect(oncoming).toBeVisible({ timeout: 10000 });
+    await page.keyboard.up('KeyW');
+    await expect(oncoming.getByText('Движение по запрещённой встречной полосе')).toBeVisible();
+    await oncoming.getByRole('button', { name: 'Продолжить', exact: true }).click();
     await page.keyboard.down('KeyW');
 
     const dialog = page.getByRole('dialog', { name: 'Столкновение', exact: true });

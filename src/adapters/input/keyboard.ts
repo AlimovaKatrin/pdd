@@ -4,6 +4,9 @@ import type { GameSession } from '../../use-cases/session/game-session';
 export function bindKeyboard(session: GameSession) {
   const held = new Set<string>();
 
+  // A driving key may be released after focus has moved into a newly opened dialog.
+  const captured = new Set<string>();
+
   const update = () =>
     session.setControls({
       throttle: held.has('KeyW') || held.has('ArrowUp'),
@@ -52,6 +55,7 @@ export function bindKeyboard(session: GameSession) {
 
     event.preventDefault();
     held.add(event.code);
+    captured.add(event.code);
 
     if (!event.repeat && event.code === 'KeyQ') {
       session.toggleIndicator('left');
@@ -65,6 +69,10 @@ export function bindKeyboard(session: GameSession) {
   };
 
   const keyup = (event: KeyboardEvent) => {
+    if (captured.delete(event.code)) {
+      event.preventDefault();
+    }
+
     held.delete(event.code);
     update();
   };
@@ -82,6 +90,7 @@ export function bindKeyboard(session: GameSession) {
   return () => {
     unsubscribe();
     held.clear();
+    captured.clear();
     session.clearInput();
     window.removeEventListener('keydown', keydown);
     window.removeEventListener('keyup', keyup);

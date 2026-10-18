@@ -51,6 +51,7 @@ export function worldAfterSafeReturn(map: RoadMap, world: World): World | null {
     relocation: world.relocation + 1,
     vehicle,
     stops: fresh.stops,
+    oncomingEpisode: fresh.oncomingEpisode,
     signalEpisodes: fresh.signalEpisodes,
     speedEpisodes: fresh.speedEpisodes,
     drivingProgress: fresh.drivingProgress,

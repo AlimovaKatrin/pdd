@@ -59,7 +59,7 @@ function buildLanes(junctions: Junction[]) {
       y: to.y - direction.y * (end ? JUNCTION_HALF_SIZE : 0),
     };
 
-    boundaries.push({ id, from: a, to: b, marking: 'solid', reference: '9.1.1' });
+    boundaries.push({ id, from: a, to: b, marking: 'double-solid', reference: '9.1.1' });
 
     for (const forward of [true, false]) {
       const sign = forward ? 1 : -1;

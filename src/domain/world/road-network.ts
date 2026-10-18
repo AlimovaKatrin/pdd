@@ -21,7 +21,7 @@ export interface LaneBoundary {
   id: string;
   from: Point;
   to: Point;
-  marking: 'solid';
+  marking: 'solid' | 'double-solid';
   reference: '9.1.1';
 }
 

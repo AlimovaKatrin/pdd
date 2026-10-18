@@ -1,3 +1,4 @@
+import { checkOncoming } from '../rules/oncoming';
 import { stopAtContact } from './stop-at-contact';
 import { detectCollision, type Collision } from './collision';
 import { stepTraffic } from './traffic';
@@ -99,6 +100,7 @@ export function stepWorld(
 
   violations.push(
     ...checkSpeed(next, map),
+    ...checkOncoming(world, next, map),
     ...checkSignals(world, next, map),
     ...checkTurn(world, next, map),
     ...stepPedestrians(world, next, map, STEP),

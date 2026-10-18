@@ -50,6 +50,11 @@ export function formatCauseFacts(cause: ReadonlyData<Cause>) {
     case 'pedestrian':
       return `Пешеход имел преимущество и был вынужден остановиться: ${String(facts.intendedSpeed)} → 0 м/с.`;
 
+    case 'oncoming':
+      return facts.marking === 'double-solid'
+        ? 'На участке действует двойная сплошная разметка. Она разделяет встречные потоки.'
+        : 'На участке действует сплошная разметка. Она разделяет встречные потоки.';
+
     case 'indicator': {
       const direction = facts.direction === 'left' ? 'налево' : 'направо';
 

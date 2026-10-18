@@ -58,6 +58,7 @@ export interface World {
     speed: Record<string, { valid: boolean }>;
     pedestrians: Record<string, { episode: number; valid: boolean; credited: boolean }>;
   };
+  oncomingEpisode: { active: boolean; number: number };
   speedEpisodes: Record<string, { active: boolean; number: number }>;
   signalEpisodes: Record<string, StopEpisode>;
   maneuver: Maneuver | null;
@@ -92,6 +93,7 @@ export function initialWorld(map: RoadMap): World {
     ),
     successfulManeuvers: 0,
     drivingProgress: { speed: {}, pedestrians: {} },
+    oncomingEpisode: { active: false, number: 1 },
     speedEpisodes: Object.fromEntries(
       [map.citySpeedLimit, ...(map.speedZones ?? [])].map((zone) => [
         zone.id,

@@ -48,9 +48,19 @@ try {
   }
 
   for (const boundary of network.boundaries) {
-    elements.push(
-      `<path d="M${boundary.from.x},${boundary.from.y} L${boundary.to.x},${boundary.to.y}" stroke="#fff" stroke-width="0.7"/>`,
-    );
+    const heading = Math.atan2(boundary.to.y - boundary.from.y, boundary.to.x - boundary.from.x);
+
+    const offsets = boundary.marking === 'double-solid' ? [-0.3, 0.3] : [0];
+
+    for (const offset of offsets) {
+      const x = -Math.sin(heading) * offset;
+
+      const y = Math.cos(heading) * offset;
+
+      elements.push(
+        `<path d="M${boundary.from.x + x},${boundary.from.y + y} L${boundary.to.x + x},${boundary.to.y + y}" stroke="#fff" stroke-width="0.25"/>`,
+      );
+    }
   }
 
   for (const junction of network.junctions) {

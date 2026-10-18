@@ -36,12 +36,23 @@ export function drawNetworkScenery(
 
   for (const boundary of network.boundaries) {
     graphics.lineStyle(2, 0xf7f3df);
-    graphics.lineBetween(
-      boundary.from.x * SCALE,
-      boundary.from.y * SCALE,
-      boundary.to.x * SCALE,
-      boundary.to.y * SCALE,
-    );
+
+    const heading = Math.atan2(boundary.to.y - boundary.from.y, boundary.to.x - boundary.from.x);
+
+    const offsets = boundary.marking === 'double-solid' ? [-0.22, 0.22] : [0];
+
+    for (const offset of offsets) {
+      const x = -Math.sin(heading) * offset;
+
+      const y = Math.cos(heading) * offset;
+
+      graphics.lineBetween(
+        (boundary.from.x + x) * SCALE,
+        (boundary.from.y + y) * SCALE,
+        (boundary.to.x + x) * SCALE,
+        (boundary.to.y + y) * SCALE,
+      );
+    }
   }
 
   const xs = [...new Set(network.junctions.map((junction) => junction.x))].sort((a, b) => a - b);

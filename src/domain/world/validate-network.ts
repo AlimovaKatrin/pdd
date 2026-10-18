@@ -79,7 +79,7 @@ export function validateNetwork(map: RoadMap): void {
     require(validPoint(boundary.from) &&
       validPoint(boundary.to) &&
       pointDistance(boundary.from, boundary.to) > 0 &&
-      boundary.marking === 'solid' &&
+      ['solid', 'double-solid'].includes(boundary.marking) &&
       boundary.reference === '9.1.1', 'boundary geometry');
   }
 
