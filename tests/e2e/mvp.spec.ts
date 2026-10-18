@@ -369,22 +369,21 @@ test('speed limit stays visible despite legacy settings and a clean trip has its
   await page.getByRole('button', { name: 'Да, удалить' }).click();
   await expect(page.getByText('Всего: 0 поездок · 0 нарушений · 0 ответов')).toBeVisible();
 });
-test('city speed violation is reachable by driving and remains readable without a question', async ({
+test('a recorded city speed violation stays readable without raising the handling speed', async ({
   page,
 }) => {
-  await page.goto('/');
-  await page.getByRole('button', { name: 'Поехать в город', exact: true }).click();
-  await page.keyboard.down('KeyW');
-  await expect(page.getByRole('dialog', { name: 'Разбор нарушения' })).toBeVisible({
-    timeout: 12000,
-  });
-  await page.keyboard.up('KeyW');
-  await page.getByRole('button', { name: 'Продолжить', exact: true }).click();
-  await page.keyboard.down('KeyW');
-  await expect(page.getByRole('heading', { name: 'Превышение скорости в городе' })).toBeVisible({
-    timeout: 12000,
-  });
-  await page.keyboard.up('KeyW');
+  const data = fixture();
+
+  data.violations[0] = {
+    ...data.violations[0],
+    type: 'speed',
+    speed: 61 / 3.6,
+    roadObjectId: 'city-60',
+    causes: [cause('city-speed-limit', { speedKmh: 61, limitKmh: 60 })],
+    material: null,
+  };
+  await seed(page, data);
+  await page.getByRole('button', { name: /Превышение скорости в городе/ }).click();
   await expect(page.getByRole('link', { name: 'ПДД РФ · Пункт 10.2' })).toHaveAttribute(
     'href',
     'https://www.consultant.ru/document/cons_doc_LAW_2709/803907f6876a655f77995888208488d4bfccf247/',
@@ -403,8 +402,7 @@ test('city speed violation is reachable by driving and remains readable without 
   }
 
   await page.screenshot({ path: 'test-results/city-speed-review.png' });
-  await page.getByRole('button', { name: 'Продолжить', exact: true }).click();
-  await expect(page.getByRole('dialog')).toBeHidden();
+  await page.getByRole('button', { name: 'Назад в журнал', exact: true }).click();
   await page.reload();
   await page.getByRole('button', { name: /^Журнал/ }).click();
   await page.getByRole('button', { name: /Превышение скорости в городе/ }).click();

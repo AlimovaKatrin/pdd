@@ -249,12 +249,6 @@ for (const [width, height] of [
     await page.goto('/tests/e2e/city-harness.html?collision');
     await page.getByRole('button', { name: 'Поехать в город', exact: true }).click();
     await page.keyboard.down('KeyW');
-    await expect(page.getByRole('dialog', { name: 'Разбор нарушения' })).toBeVisible({
-      timeout: 10000,
-    });
-    await page.keyboard.up('KeyW');
-    await page.getByRole('button', { name: 'Продолжить', exact: true }).click();
-    await page.keyboard.down('KeyW');
 
     const dialog = page.getByRole('dialog', { name: 'Столкновение', exact: true });
 

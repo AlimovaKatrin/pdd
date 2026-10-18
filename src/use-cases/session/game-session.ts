@@ -203,7 +203,7 @@ export class GameSession {
       ready: this.ready,
       started: this.started,
       driving: {
-        speedKmh: Math.round(Math.abs(this.world.vehicle.speed) * 3.6),
+        speedKmh: Math.abs(this.world.vehicle.speed) * 3.6,
         speedLimit: activeSpeedLimit(this.mapData, this.world.vehicle).limit,
         indicator: this.world.vehicle.indicator,
         reversing: this.world.vehicle.speed < 0,

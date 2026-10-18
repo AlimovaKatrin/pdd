@@ -12,8 +12,8 @@ import { type Controls, type RoadMap, type DetectedViolation, type World } from 
 
 export const STEP = 1 / 60;
 
-// Technical ceiling of 72 km/h makes the city limit reachable during ordinary play.
-const MAX_FORWARD_SPEED_METERS_PER_SECOND = 20;
+// A handling parameter, independent of the legal speed limit.
+const MAX_FORWARD_SPEED_METERS_PER_SECOND = 12;
 
 const MAX_REVERSE_SPEED_METERS_PER_SECOND = 3;
 

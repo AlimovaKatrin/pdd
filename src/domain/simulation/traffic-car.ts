@@ -1,7 +1,8 @@
+import { speedForTrafficPath } from './traffic-speed';
 import type { RoadMap, World, Vehicle } from '../world/model';
 import type { TrafficVehicle, TrafficReaction } from '../world/vehicles';
 import { VEHICLE_LENGTH, VEHICLE_WIDTH } from '../world/vehicles';
-import { activeSpeedLimit, signalColor } from '../world/traffic';
+import { signalColor } from '../world/traffic';
 import {
   pathLength,
   pointDistance,
@@ -69,7 +70,27 @@ export function stepTrafficCar(
 
   const approach = junction?.approaches.find((item) => item.incomingLaneId === lane.id);
 
-  let targetSpeed = Math.min(CRUISE_SPEED, activeSpeedLimit(map, car.vehicle).limit / 3.6);
+  const futurePath = [...path];
+
+  if (connection) {
+    if (car.segment === 'lane') {
+      futurePath.push(...connection.path.slice(1));
+    }
+
+    const outgoing = network.lanes.find((item) => item.id === connection.toLaneId)!;
+
+    futurePath.push(outgoing.to);
+  }
+
+  let targetSpeed = speedForTrafficPath(
+    map,
+    car.vehicle,
+    futurePath,
+    car.distance,
+    CRUISE_SPEED,
+    BRAKING,
+    stepSeconds,
+  );
 
   let maximumDistance = Infinity;
 
@@ -125,18 +146,6 @@ export function stepTrafficCar(
     car.vehicle.indicator = connection.movement === 'straight' ? null : connection.movement;
   } else {
     car.vehicle.indicator = null;
-  }
-
-  const futurePath = [...path];
-
-  if (connection) {
-    if (car.segment === 'lane') {
-      futurePath.push(...connection.path.slice(1));
-    }
-
-    const outgoing = network.lanes.find((item) => item.id === connection.toLaneId)!;
-
-    futurePath.push(outgoing.to);
   }
 
   const participants = [

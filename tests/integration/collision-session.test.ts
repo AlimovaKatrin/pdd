@@ -1,7 +1,8 @@
+import { cause } from '../../src/domain/violations/causes';
 import { expect, it } from 'vitest';
 import { GameSession } from '../../src/use-cases/session/game-session';
 import { expandedCity } from '../../src/content/maps/expanded-city';
-import { emptyControls, emptyHistory } from '../../src/domain/world/model';
+import { emptyControls, emptyHistory, type History } from '../../src/domain/world/model';
 import { localContent } from '../../src/adapters/content/local';
 import { vehiclesOverlap } from '../../src/domain/world/vehicle-geometry';
 
@@ -13,7 +14,27 @@ it('pauses contact once, refuses retry and preserves the trip, traffic and histo
   const session = new GameSession(
     map,
     {
-      load: async () => emptyHistory(),
+      load: async (): Promise<History> => ({
+        ...emptyHistory(),
+        trips: [{ id: 'past-trip', startedAt: '2026-10-17T10:00:00Z', status: 'finished' }],
+        violations: [
+          {
+            id: 'past-stop',
+            tripId: 'past-trip',
+            attemptId: 'past-attempt',
+            date: '2026-10-17T10:00:00Z',
+            type: 'stop',
+            roadObjectId: 'past-line',
+            episode: 1,
+            speed: 3,
+            tick: 60,
+            mapVersion: 'neighborhood-3',
+            rulesVersion: 'mvp-preview-5',
+            causes: [cause('stop-line', { speedKmh: 10.8 })],
+            material: null,
+          },
+        ],
+      }),
       save: async () => {},
     },
     localContent,

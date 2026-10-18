@@ -34,7 +34,7 @@ export interface RoadMap {
   network?: RoadNetwork;
   stops: StopLine[];
   spawn: Point & { heading: number };
-  citySpeedLimit: { id: string; limit: number };
+  citySpeedLimit: { id: string; limit: number; reference: '10.2' };
   speedZones?: SpeedZone[];
   signals?: TrafficSignal[];
   intersections?: Intersection[];

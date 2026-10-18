@@ -40,7 +40,7 @@ export const expandedCity: RoadMap = {
   ],
   network,
   spawn: { x: 163.5, y: 220, heading: -Math.PI / 2 },
-  citySpeedLimit: { id: 'city-60', limit: 60 },
+  citySpeedLimit: { id: 'city-60', limit: 60, reference: '10.2' },
   stops: network.junctions.flatMap((junction) =>
     junction.approaches
       .filter((a) => a.stopId)

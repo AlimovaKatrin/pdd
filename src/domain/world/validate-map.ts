@@ -34,6 +34,7 @@ export function validateMap(map: RoadMap): RoadMap {
     !map.version ||
     !map.citySpeedLimit ||
     !positive(map.citySpeedLimit.limit) ||
+    map.citySpeedLimit.reference !== '10.2' ||
     !positive(map.width) ||
     !positive(map.height) ||
     !point(map.spawn) ||

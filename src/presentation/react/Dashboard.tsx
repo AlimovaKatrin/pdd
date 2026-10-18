@@ -1,3 +1,4 @@
+import { displayedSpeed } from '../view-models/driving-speed';
 import { ArrowLeft, ArrowRight, Pause, Play, RotateCcw, Square } from 'lucide-react';
 import type { GameSession, SessionSnapshot } from '../../use-cases/session/game-session';
 
@@ -12,7 +13,7 @@ export function Dashboard({
 }) {
   const { driving } = state;
 
-  const speed = driving.speedKmh;
+  const speed = displayedSpeed(driving.speedKmh, driving.speedLimit);
 
   const paused = state.started && state.pauses.length > 0;
 
