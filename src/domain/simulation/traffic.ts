@@ -1,3 +1,4 @@
+import { signalColor } from '../world/traffic';
 import { vehiclesOverlap } from '../world/vehicle-geometry';
 import type { RoadMap, World } from '../world/model';
 import { VEHICLE_LENGTH } from '../world/vehicles';
@@ -51,6 +52,34 @@ export function stepTraffic(previous: World, next: World, map: RoadMap, stepSeco
   for (const car of state.vehicles) {
     const path = routePath(car, network);
 
+    if (car.segment === 'lane' && car.connectionId) {
+      const before = previous.traffic.vehicles.find((item) => item.id === car.id)!;
+
+      const lane = network.lanes.find((item) => item.id === car.laneId)!;
+
+      const approach = network.junctions
+        .find((item) => item.id === lane.endJunction)!
+        .approaches.find((item) => item.incomingLaneId === lane.id)!;
+
+      const signal = map.signals?.find((item) => item.id === approach.signalId);
+
+      const entryDistance = pathLength(path) - VEHICLE_LENGTH / 2;
+
+      const stopDistance = entryDistance - 1;
+
+      if (signal && before.distance <= stopDistance && car.distance > stopDistance) {
+        const fraction = (stopDistance - before.distance) / (car.distance - before.distance);
+
+        car.entrySignal = signalColor(signal, previous.tick + fraction);
+      }
+
+      if (before.distance <= entryDistance && car.distance > entryDistance) {
+        const fraction = (entryDistance - before.distance) / (car.distance - before.distance);
+
+        car.enteredTick = previous.tick + fraction;
+      }
+    }
+
     if (car.distance < pathLength(path)) {
       continue;
     }
@@ -59,7 +88,7 @@ export function stepTraffic(previous: World, next: World, map: RoadMap, stepSeco
       if (car.connectionId) {
         car.segment = 'junction';
         car.distance = 0;
-        car.enteredTick = next.tick;
+        car.enteredTick ??= next.tick;
       }
     } else {
       const connection = network.connections.find((item) => item.id === car.connectionId)!;
@@ -72,6 +101,7 @@ export function stepTraffic(previous: World, next: World, map: RoadMap, stepSeco
       car.waitingTicks = 0;
       car.reaction = null;
       car.enteredTick = null;
+      car.entrySignal = null;
       car.vehicle.indicator = null;
     }
   }

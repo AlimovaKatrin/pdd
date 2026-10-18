@@ -48,6 +48,7 @@ export function createTrafficVehicle(
     waitingTicks: 0,
     reaction: null,
     enteredTick: null,
+    entrySignal: null,
   };
 }
 

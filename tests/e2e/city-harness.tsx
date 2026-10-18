@@ -1,3 +1,4 @@
+import { priorityCity } from '../fixtures/priority-city';
 import type { Vehicle } from '../../src/domain/world/model';
 import { createRoot } from 'react-dom/client';
 import { expandedCity } from '../../src/content/maps/expanded-city';
@@ -25,9 +26,15 @@ declare global {
   }
 }
 
-const map = new URLSearchParams(location.search).has('collision')
-  ? { ...expandedCity, spawn: { x: 162, y: 43.5, heading: Math.PI } }
-  : expandedCity;
+const parameters = new URLSearchParams(location.search);
+
+let map = expandedCity;
+
+if (parameters.has('collision')) {
+  map = { ...expandedCity, spawn: { x: 162, y: 43.5, heading: Math.PI } };
+} else if (parameters.has('priority')) {
+  map = priorityCity();
+}
 
 const session = new GameSession(map, new IndexedDbHistory(), localContent, {
   id: () => crypto.randomUUID(),

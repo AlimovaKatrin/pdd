@@ -1,4 +1,50 @@
 import { expect, test, type Page } from '@playwright/test';
+import { driveLeftAtGreen } from './priority-driving';
+
+test('left-turn priority identifies the car, supports correction and survives reload', async ({
+  page,
+}) => {
+  test.setTimeout(90000);
+  await page.setViewportSize({ width: 1024, height: 650 });
+  await page.goto('/tests/e2e/city-harness.html?priority');
+  await page.getByRole('button', { name: 'Поехать в город', exact: true }).click();
+  await page.keyboard.press('KeyQ');
+  await driveLeftAtGreen(page, false);
+
+  const dialog = page.getByRole('dialog', { name: 'Разбор нарушения', exact: true });
+
+  await expect(dialog.getByText('Не уступили встречной машине на зелёный')).toBeVisible();
+  await expect(dialog.getByText(/М1: с севера, прямо/)).toBeVisible();
+  await expect(
+    dialog.getByRole('link', { name: 'ПДД РФ · Пункт 13.4', exact: true }),
+  ).toBeVisible();
+  await expect(dialog.locator('.incident-question')).toHaveCount(0);
+  expect(
+    await dialog.evaluate((element) => {
+      const bounds = element.getBoundingClientRect();
+
+      return (
+        bounds.top >= 0 &&
+        bounds.bottom <= innerHeight &&
+        element.scrollHeight <= element.clientHeight
+      );
+    }),
+  ).toBe(true);
+  await page.screenshot({ path: 'test-results/priority-left.png' });
+  await dialog.getByRole('button', { name: 'Повторить ситуацию', exact: true }).click();
+  await driveLeftAtGreen(page, true);
+  await expect(dialog).not.toBeVisible();
+  expect(await page.evaluate(() => window.cityTest.pose().x)).toBeLessThan(146);
+  expect(await page.evaluate(() => window.cityTest.snapshot().history.violations.length)).toBe(1);
+  await page.reload();
+  await page.getByRole('button', { name: 'Поехать в город', exact: true }).click();
+  await page.getByRole('button', { name: /Журнал/ }).click();
+  await page.getByRole('button', { name: /Не уступили встречной машине на зелёный/ }).click();
+  await expect(dialog.getByText(/М1: с севера, прямо/)).toBeVisible();
+  await expect(dialog.getByRole('button', { name: 'Повторить ситуацию', exact: true })).toHaveCount(
+    0,
+  );
+});
 
 async function canvasPixels(page: Page) {
   return page.locator('canvas').evaluate(async (canvas: HTMLCanvasElement) => {

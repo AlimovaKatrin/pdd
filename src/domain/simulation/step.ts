@@ -1,3 +1,5 @@
+import { updatePlayerPassage } from '../world/junction-passage';
+import { checkPriority } from '../rules/priority';
 import { checkOncoming } from '../rules/oncoming';
 import { stopAtContact } from './stop-at-contact';
 import { detectCollision, type Collision } from './collision';
@@ -79,6 +81,8 @@ export function stepWorld(
     stopAtContact(world, next, map, collision.fraction);
   }
 
+  updatePlayerPassage(world, next, map);
+
   const violations: DetectedViolation[] = [];
 
   for (const line of map.stops) {
@@ -101,6 +105,7 @@ export function stepWorld(
   violations.push(
     ...checkSpeed(next, map),
     ...checkOncoming(world, next, map),
+    ...checkPriority(world, next, map, STEP),
     ...checkSignals(world, next, map),
     ...checkTurn(world, next, map),
     ...stepPedestrians(world, next, map, STEP),

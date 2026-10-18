@@ -1,3 +1,4 @@
+import { predictsPlayerConflict } from './traffic-conflict';
 import { speedForTrafficPath } from './traffic-speed';
 import type { RoadMap, World, Vehicle } from '../world/model';
 import type { TrafficVehicle, TrafficReaction } from '../world/vehicles';
@@ -146,6 +147,23 @@ export function stepTrafficCar(
     car.vehicle.indicator = connection.movement === 'straight' ? null : connection.movement;
   } else {
     car.vehicle.indicator = null;
+  }
+
+  if (car.segment === 'junction' && junction?.control === 'signals') {
+    const obstacle = priorityObstacle(car, world, map);
+
+    if (obstacle) {
+      targetSpeed = 0;
+      car.reaction = obstacle;
+    }
+  }
+
+  if (
+    targetSpeed > 0 &&
+    predictsPlayerConflict(car.vehicle, futurePath, car.distance, world.vehicle)
+  ) {
+    targetSpeed = 0;
+    car.reaction = { reason: 'vehicle', participantId: 'player', junctionId: junction?.id };
   }
 
   const participants = [

@@ -1,3 +1,4 @@
+import { formatPriorityFacts } from './priority-facts';
 import type { Cause, History, Violation } from '../../domain/world/model';
 import type { Question } from '../../domain/learning/question';
 import type { ReadonlyData } from '../../domain/world/read-only';
@@ -49,6 +50,9 @@ export function formatCauseFacts(cause: ReadonlyData<Cause>) {
       return `Сигнал при пересечении: ${facts.signal === 'red' ? 'красный' : 'красный с жёлтым'}.`;
     case 'pedestrian':
       return `Пешеход имел преимущество и был вынужден остановиться: ${String(facts.intendedSpeed)} → 0 м/с.`;
+
+    case 'priority':
+      return formatPriorityFacts(facts);
 
     case 'oncoming':
       return facts.marking === 'double-solid'

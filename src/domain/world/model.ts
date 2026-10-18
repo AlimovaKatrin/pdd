@@ -47,6 +47,17 @@ export interface StopEpisode {
   number: number;
 }
 
+export interface JunctionPassage {
+  junctionId: string;
+  incomingLaneId: string;
+  connectionId: string;
+  entryHeading: number;
+  enteredTick: number | null;
+  entrySignal: SignalColor | null;
+  episode: number;
+  reported: string[];
+}
+
 export interface World {
   tick: number;
   relocation: number;
@@ -58,6 +69,8 @@ export interface World {
     speed: Record<string, { valid: boolean }>;
     pedestrians: Record<string, { episode: number; valid: boolean; credited: boolean }>;
   };
+  junctionPassage: JunctionPassage | null;
+  passageNumber: number;
   oncomingEpisode: { active: boolean; number: number };
   speedEpisodes: Record<string, { active: boolean; number: number }>;
   signalEpisodes: Record<string, StopEpisode>;
@@ -93,6 +106,8 @@ export function initialWorld(map: RoadMap): World {
     ),
     successfulManeuvers: 0,
     drivingProgress: { speed: {}, pedestrians: {} },
+    junctionPassage: null,
+    passageNumber: 0,
     oncomingEpisode: { active: false, number: 1 },
     speedEpisodes: Object.fromEntries(
       [map.citySpeedLimit, ...(map.speedZones ?? [])].map((zone) => [
@@ -116,7 +131,7 @@ export function initialWorld(map: RoadMap): World {
   };
 }
 
-export const RULES_VERSION = 'mvp-preview-5';
+export const RULES_VERSION = 'city-preview-1';
 
 export interface StopViolation {
   type: 'stop';
@@ -224,6 +239,7 @@ export interface Intersection extends Point {
 }
 
 export interface Maneuver {
+  valid: boolean;
   intersectionId: string;
   episode: number;
   entryHeading: number;

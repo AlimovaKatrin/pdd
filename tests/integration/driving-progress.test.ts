@@ -6,6 +6,7 @@ import { checkSignals } from '../../src/domain/rules/signals';
 import { checkSpeed } from '../../src/domain/rules/speed';
 import { initialWorld, type Vehicle, type World } from '../../src/domain/world/model';
 import { updateDrivingProgress } from '../../src/domain/simulation/driving-progress';
+import { cause } from '../../src/domain/violations/causes';
 
 function advance(previous: World, vehicle: Partial<Vehicle> = {}) {
   const next = structuredClone(previous);
@@ -26,6 +27,27 @@ function advance(previous: World, vehicle: Partial<Vehicle> = {}) {
 }
 
 describe('successful driving situations', () => {
+  it('does not count a signalled turn as correct after a priority violation', () => {
+    let world = initialWorld(neighborhood);
+
+    Object.assign(world.vehicle, { x: 64, y: 50, heading: 0, speed: 4, indicator: 'right' });
+    world = advance(world);
+
+    const turning = advance(world, { heading: 0.8 });
+
+    updateDrivingProgress(world, turning, neighborhood, [
+      {
+        type: 'priority',
+        roadObjectId: turning.maneuver!.intersectionId,
+        episode: 1,
+        tick: turning.tick,
+        speed: 4,
+        causes: [cause('priority-left-green', {})],
+      },
+    ]);
+    expect(advance(turning, { x: 80, heading: Math.PI / 2 }).successfulManeuvers).toBe(0);
+  });
+
   it.each(['left', 'right'] as const)(
     'counts one completed %s turn, not its intermediate steps',
     (side) => {

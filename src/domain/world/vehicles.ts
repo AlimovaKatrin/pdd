@@ -32,6 +32,7 @@ export interface TrafficVehicle {
   waitingTicks: number;
   reaction: TrafficReaction | null;
   enteredTick: number | null;
+  entrySignal: 'green' | 'yellow' | 'red' | 'red-yellow' | null;
 }
 
 export interface TrafficState {
