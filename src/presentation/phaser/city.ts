@@ -107,6 +107,8 @@ export function mountCity(parent: HTMLElement, session: GameSession) {
     scene: CityScene,
     banner: false,
     audio: { noAudio: true },
+    // Input belongs to the application adapter; Phaser only renders the world.
+    input: { keyboard: false, mouse: false, touch: false, gamepad: false },
     scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
     render: { antialias: true },
     fps: { target: 60 },

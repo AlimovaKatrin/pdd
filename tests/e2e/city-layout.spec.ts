@@ -125,3 +125,38 @@ test('city review supports real browser zoom at 125, 150 and 200 percent', async
     await rm(directory, { recursive: true, force: true });
   }
 });
+
+test('repeated renderer mounts release old DOM nodes and event listeners', async ({ page }) => {
+  await page.goto('/tests/e2e/performance-harness.html');
+  await expect(page.locator('canvas')).toHaveCount(1);
+
+  const client = await page.context().newCDPSession(page);
+
+  await client.send('Performance.enable');
+
+  async function remountAndMeasure() {
+    await page.evaluate(() => window.cityPerf.remount());
+    await expect(page.locator('canvas')).toHaveCount(1);
+    await page.waitForTimeout(200);
+    await client.send('HeapProfiler.collectGarbage');
+    await client.send('HeapProfiler.collectGarbage');
+
+    const result = await client.send('Performance.getMetrics');
+
+    return Object.fromEntries(result.metrics.map((metric) => [metric.name, metric.value]));
+  }
+
+  const baseline = await remountAndMeasure();
+
+  for (let iteration = 0; iteration < 5; iteration++) {
+    const current = await remountAndMeasure();
+
+    expect(current.Nodes - baseline.Nodes).toBeLessThan(100);
+    expect(current.JSEventListeners).toBe(baseline.JSEventListeners);
+    expect(await page.evaluate(() => window.cityPerf.read().activeWorlds)).toBe(1);
+  }
+
+  await page.evaluate(() => window.cityPerf.dispose());
+  await expect(page.locator('canvas')).toHaveCount(0);
+  expect(await page.evaluate(() => window.cityPerf.read().activeWorlds)).toBe(0);
+});

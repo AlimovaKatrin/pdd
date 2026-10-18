@@ -129,6 +129,7 @@ test('releasing a driving brake cannot activate the newly focused dialog button'
 }) => {
   await page.goto('/tests/e2e/city-harness.html');
   await page.getByRole('button', { name: 'Поехать в город', exact: true }).click();
+  await expect(page.locator('#road')).toBeFocused();
   await page.keyboard.down('Space');
   await page.evaluate(() => window.cityTest.pause());
   await expect(page.getByText('Небольшая остановка')).toBeVisible();
