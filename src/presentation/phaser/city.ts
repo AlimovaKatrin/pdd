@@ -15,6 +15,8 @@ export function mountCity(parent: HTMLElement, session: GameSession) {
 
     private traffic!: Phaser.GameObjects.Graphics;
 
+    private otherVehicles = new Map<string, ReturnType<typeof createVehicleView>>();
+
     private previousTarget: CameraTarget | null = null;
 
     private cameraCentre = { ...session.map.spawn };
@@ -54,6 +56,24 @@ export function mountCity(parent: HTMLElement, session: GameSession) {
       const world = session.getWorld();
 
       drawTraffic(this.traffic, session.map, world);
+
+      for (const [id, view] of this.otherVehicles) {
+        if (!world.traffic.vehicles.some((car) => car.id === id)) {
+          view.destroy();
+          this.otherVehicles.delete(id);
+        }
+      }
+
+      for (const car of world.traffic.vehicles) {
+        let view = this.otherVehicles.get(car.id);
+
+        if (!view) {
+          view = createVehicleView(this, car.vehicle, { color: 0x8a967c, label: car.label });
+          this.otherVehicles.set(car.id, view);
+        }
+
+        view.update(car.vehicle, world.tick);
+      }
 
       this.vehicle.update(world.vehicle, world.tick);
 

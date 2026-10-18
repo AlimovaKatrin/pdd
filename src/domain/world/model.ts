@@ -1,5 +1,12 @@
 import type { CauseCode, Question, RuleType } from '../learning/question-types';
 
+import type { Vehicle, TrafficState, Indicator } from './vehicles';
+import { createTraffic } from './traffic-state';
+
+export { VEHICLE_LENGTH, VEHICLE_WIDTH } from './vehicles';
+
+export type { Vehicle, Indicator } from './vehicles';
+
 import type { Point } from './point';
 import type { RoadNetwork } from './road-network';
 
@@ -34,15 +41,6 @@ export interface RoadMap {
   crossings?: Crossing[];
 }
 
-export type Indicator = 'left' | 'right' | null;
-
-export interface Vehicle extends Point {
-  heading: number;
-  speed: number;
-  indicator: Indicator;
-  indicatorTurn: number;
-}
-
 export interface StopEpisode {
   phase: 'ready' | 'crossed';
   stopped: boolean;
@@ -52,6 +50,7 @@ export interface StopEpisode {
 export interface World {
   tick: number;
   vehicle: Vehicle;
+  traffic: TrafficState;
   stops: Record<string, StopEpisode>;
   successfulManeuvers: number;
   drivingProgress: {
@@ -84,6 +83,7 @@ export const emptyControls = (): Controls => ({
 export function initialWorld(map: RoadMap): World {
   return {
     tick: 0,
+    traffic: createTraffic(map.network, map.spawn),
     vehicle: { ...map.spawn, speed: 0, indicator: null, indicatorTurn: 0 },
     stops: Object.fromEntries(
       map.stops.map((s) => [s.id, { phase: 'ready', stopped: false, number: 1 }]),
@@ -111,10 +111,6 @@ export function initialWorld(map: RoadMap): World {
     advisoryUntil: 0,
   };
 }
-
-export const VEHICLE_LENGTH = 4.2;
-
-export const VEHICLE_WIDTH = 1.8;
 
 export const RULES_VERSION = 'mvp-preview-5';
 

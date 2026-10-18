@@ -1,3 +1,4 @@
+import { stepTraffic } from './traffic';
 import { checkTurn } from '../maneuvers/turn';
 import { updateDrivingProgress } from './driving-progress';
 import { checkSpeed } from '../rules/speed';
@@ -92,6 +93,7 @@ export function stepWorld(
     ...checkTurn(world, next, map),
     ...stepPedestrians(world, next, map, STEP),
   );
+  stepTraffic(world, next, map, STEP);
   updateDrivingProgress(world, next, map, violations);
 
   return { world: next, violations };
