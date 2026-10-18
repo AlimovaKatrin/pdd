@@ -78,3 +78,48 @@ export async function driveLeftAtGreen(page: Page, yieldFirst: boolean) {
     await page.keyboard.up(key);
   }
 }
+
+export async function driveAcrossMainRoad(page: Page, yieldFirst: boolean) {
+  let held = new Set<string>();
+
+  for (let iteration = 0; iteration < 1000; iteration++) {
+    const world = await page.evaluate(() => window.cityTest.world());
+
+    const snapshot = await page.evaluate(() => window.cityTest.snapshot());
+
+    expect(snapshot.collision).toBeNull();
+
+    if (snapshot.current || world.vehicle.y > 60) {
+      break;
+    }
+
+    const waiting = yieldFirst && world.tick < 850 && world.vehicle.y > 19;
+
+    const keys = new Set<string>();
+
+    if (waiting) {
+      keys.add('Space');
+    } else if (world.vehicle.speed < 4) {
+      keys.add('KeyW');
+    }
+
+    for (const key of held) {
+      if (!keys.has(key)) {
+        await page.keyboard.up(key);
+      }
+    }
+
+    for (const key of keys) {
+      if (!held.has(key)) {
+        await page.keyboard.down(key);
+      }
+    }
+
+    held = keys;
+    await page.waitForTimeout(40);
+  }
+
+  for (const key of held) {
+    await page.keyboard.up(key);
+  }
+}

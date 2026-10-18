@@ -1,5 +1,28 @@
 import { expect, test, type Page } from '@playwright/test';
-import { driveLeftAtGreen } from './priority-driving';
+import { driveAcrossMainRoad, driveLeftAtGreen } from './priority-driving';
+
+test('secondary road explains the main-road priority and supports a corrected retry', async ({
+  page,
+}) => {
+  test.setTimeout(90000);
+  await page.setViewportSize({ width: 1024, height: 650 });
+  await page.goto('/tests/e2e/city-harness.html?main-road');
+  await page.getByRole('button', { name: 'Поехать в город', exact: true }).click();
+  await driveAcrossMainRoad(page, false);
+
+  const dialog = page.getByRole('dialog', { name: 'Разбор нарушения', exact: true });
+
+  await expect(
+    dialog.getByRole('link', { name: 'ПДД РФ · Пункт 13.9', exact: true }),
+  ).toBeVisible();
+  await expect(dialog.getByText(/Ваша дорога — второстепенная, дорога М1 — главная/)).toBeVisible();
+  await page.screenshot({ path: 'test-results/main-road.png' });
+  await dialog.getByRole('button', { name: 'Повторить ситуацию', exact: true }).click();
+  await driveAcrossMainRoad(page, true);
+  await expect(dialog).not.toBeVisible();
+  expect(await page.evaluate(() => window.cityTest.pose().y)).toBeGreaterThan(60);
+  expect(await page.evaluate(() => window.cityTest.snapshot().history.violations.length)).toBe(1);
+});
 
 test('left-turn priority identifies the car, supports correction and survives reload', async ({
   page,

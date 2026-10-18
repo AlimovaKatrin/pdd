@@ -149,7 +149,7 @@ export function stepTrafficCar(
     car.vehicle.indicator = null;
   }
 
-  if (car.segment === 'junction' && junction?.control === 'signals') {
+  if (car.segment === 'junction' && junction?.control !== 'equal') {
     const obstacle = priorityObstacle(car, world, map);
 
     if (obstacle) {

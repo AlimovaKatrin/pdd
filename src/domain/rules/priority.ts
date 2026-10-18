@@ -40,8 +40,11 @@ export function checkPriority(
 
     const duty = junctionDuty(map, passage, before, previous.tick);
 
-    // Other priority scenarios are enabled after their dedicated acceptance checks.
-    if (duty !== 'priority-left-green' || current.reported.includes(duty)) {
+    const control = map.network!.junctions.find((item) => item.id === passage.junctionId)!.control;
+
+    const enabled = duty === 'priority-left-green' || control === 'priority';
+
+    if (!duty || !enabled || current.reported.includes(duty)) {
       continue;
     }
 
@@ -89,6 +92,10 @@ export function checkPriority(
             before.entrySignal ?? (signal ? signalColor(signal, previous.tick) : 'unregulated'),
           control: junction.control,
           participantSign: approach.sign ?? 'none',
+          participantPriority: approach.priority,
+          playerPriority: junction.approaches.find(
+            (item) => item.incomingLaneId === passage.incomingLaneId,
+          )!.priority,
           previousSpeedKmh: before.vehicle.speed * 3.6,
           actualSpeedKmh: car.vehicle.speed * 3.6,
           unimpededSpeedKmh: unimpeded.vehicle.speed * 3.6,

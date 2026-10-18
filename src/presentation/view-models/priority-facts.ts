@@ -40,6 +40,14 @@ export function formatPriorityFacts(facts: ReadonlyData<Cause['facts']>): string
     );
   }
 
+  if (facts.control === 'priority') {
+    const roads: Record<string, string> = { main: 'главная', secondary: 'второстепенная' };
+
+    details.push(
+      `Ваша дорога — ${roads[String(facts.playerPriority)] ?? 'приоритет не сохранён'}, дорога ${label} — ${roads[String(facts.participantPriority)] ?? 'приоритет не сохранён'}.`,
+    );
+  }
+
   if (
     facts.reaction === 'player-obstruction' &&
     typeof facts.actualSpeedKmh === 'number' &&
