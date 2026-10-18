@@ -44,6 +44,14 @@ if (parameters.has('collision')) {
   map = priorityCity();
 }
 
+const block = parameters.get('block');
+
+if (block === 'north-east') {
+  map = { ...map, spawn: { x: 163.5, y: 100, heading: -Math.PI / 2 } };
+} else if (block === 'south-west') {
+  map = { ...map, spawn: { x: 43.5, y: 240, heading: -Math.PI / 2 } };
+}
+
 const session = new GameSession(map, new IndexedDbHistory(), localContent, {
   id: () => crypto.randomUUID(),
   date: () => new Date().toISOString(),

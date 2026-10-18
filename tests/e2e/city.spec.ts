@@ -226,119 +226,154 @@ test('expanded city follows real driving, freezes during pause, and resets on re
   expect(errors).toEqual([]);
 });
 
-test('keyboard route crosses a junction, turns around a block and returns with the car visible', async ({
-  page,
-}) => {
-  test.setTimeout(180000);
-  await page.goto('/tests/e2e/city-harness.html');
-  await page.getByRole('button', { name: 'Поехать в город', exact: true }).click();
+for (const { block, points } of [
+  {
+    block: 'north-west',
+    points: [
+      [163.5, 160],
+      [40, 156.5],
+      [43.5, 40],
+      [160, 43.5],
+      [156.5, 155],
+    ],
+  },
+  {
+    block: 'north-east',
+    points: [
+      [163.5, 40],
+      [280, 43.5],
+      [276.5, 160],
+      [160, 156.5],
+      [163.5, 100],
+    ],
+  },
+  {
+    block: 'south-east',
+    points: [
+      [163.5, 160],
+      [280, 163.5],
+      [276.5, 280],
+      [160, 276.5],
+      [163.5, 220],
+    ],
+  },
+  {
+    block: 'south-west',
+    points: [
+      [43.5, 160],
+      [160, 163.5],
+      [156.5, 280],
+      [40, 276.5],
+      [43.5, 240],
+    ],
+  },
+]) {
+  test(`keyboard route closes the ${block} block with the car visible`, async ({ page }) => {
+    test.setTimeout(180000);
+    await page.goto(`/tests/e2e/city-harness.html?block=${block}`);
+    await page.getByRole('button', { name: 'Поехать в город', exact: true }).click();
 
-  const points = [
-    [163.5, 160],
-    [40, 156.5],
-    [43.5, 40],
-    [160, 43.5],
-    [156.5, 155],
-  ];
+    let target = 0;
 
-  let target = 0;
+    let held = new Set<string>();
 
-  let held = new Set<string>();
-
-  for (let iteration = 0; iteration < 1600 && target < points.length; iteration++) {
-    if (await page.getByRole('dialog', { name: 'Разбор нарушения' }).isVisible()) {
-      for (const key of held) {
-        await page.keyboard.up(key);
-      }
-
-      held.clear();
-
-      // Releasing a key pressed after the dialog appeared may legitimately activate its button.
+    for (let iteration = 0; iteration < 1600 && target < points.length; iteration++) {
       if (await page.getByRole('dialog', { name: 'Разбор нарушения' }).isVisible()) {
-        await page.getByRole('button', { name: 'Продолжить', exact: true }).click();
+        for (const key of held) {
+          await page.keyboard.up(key);
+        }
+
+        held.clear();
+
+        // Releasing a key pressed after the dialog appeared may legitimately activate its button.
+        if (await page.getByRole('dialog', { name: 'Разбор нарушения' }).isVisible()) {
+          await page.getByRole('button', { name: 'Продолжить', exact: true }).click();
+        }
       }
-    }
 
-    await expect(page.getByRole('dialog', { name: 'Столкновение', exact: true })).not.toBeVisible();
+      await expect(
+        page.getByRole('dialog', { name: 'Столкновение', exact: true }),
+      ).not.toBeVisible();
 
-    const world = await page.evaluate(() => window.cityTest.world());
+      const world = await page.evaluate(() => window.cityTest.world());
 
-    const pose = world.vehicle;
+      const pose = world.vehicle;
 
-    const [x, y] = points[target];
+      const [x, y] = points[target];
 
-    if (Math.hypot(x - pose.x, y - pose.y) < 5) {
-      console.info('Reached city waypoint', target, pose.x, pose.y);
-      target++;
-      continue;
-    }
+      if (Math.hypot(x - pose.x, y - pose.y) < 5) {
+        console.info('Reached city waypoint', target, pose.x, pose.y);
+        target++;
+        continue;
+      }
 
-    const desired = Math.atan2(y - pose.y, x - pose.x);
+      const desired = Math.atan2(y - pose.y, x - pose.x);
 
-    const angle = Math.atan2(Math.sin(desired - pose.heading), Math.cos(desired - pose.heading));
+      const angle = Math.atan2(Math.sin(desired - pose.heading), Math.cos(desired - pose.heading));
 
-    const blocked = world.traffic.vehicles.some(({ vehicle }) => {
-      const dx = vehicle.x - pose.x;
+      const blocked = world.traffic.vehicles.some(({ vehicle }) => {
+        const dx = vehicle.x - pose.x;
 
-      const dy = vehicle.y - pose.y;
+        const dy = vehicle.y - pose.y;
 
-      const ahead = dx * Math.cos(pose.heading) + dy * Math.sin(pose.heading);
+        const ahead = dx * Math.cos(pose.heading) + dy * Math.sin(pose.heading);
 
-      const lateral = -dx * Math.sin(pose.heading) + dy * Math.cos(pose.heading);
+        const lateral = -dx * Math.sin(pose.heading) + dy * Math.cos(pose.heading);
 
-      return ahead > 0 && ahead < 12 && Math.abs(lateral) < 2.5;
-    });
+        return ahead > 0 && ahead < 12 && Math.abs(lateral) < 2.5;
+      });
 
-    const keys = new Set([blocked || pose.speed > 6 ? 'Space' : 'KeyW']);
+      const keys = new Set([blocked || pose.speed > 6 ? 'Space' : 'KeyW']);
 
-    if (Math.abs(angle) > 0.06) {
-      keys.add(angle > 0 ? 'KeyD' : 'KeyA');
+      if (Math.abs(angle) > 0.06) {
+        keys.add(angle > 0 ? 'KeyD' : 'KeyA');
+      }
+
+      for (const key of held) {
+        if (!keys.has(key)) {
+          await page.keyboard.up(key);
+        }
+      }
+
+      for (const key of keys) {
+        if (!held.has(key)) {
+          await page.keyboard.down(key);
+        }
+      }
+
+      held = keys;
+
+      if (iteration % 30 === 0) {
+        const bluePixels = await page.locator('canvas').evaluate((canvas: HTMLCanvasElement) => {
+          const pixels = canvas
+            .getContext('2d')!
+            .getImageData(0, 0, canvas.width, canvas.height).data;
+
+          let count = 0;
+
+          for (let offset = 0; offset < pixels.length; offset += 4) {
+            if (pixels[offset] === 52 && pixels[offset + 1] === 120 && pixels[offset + 2] === 196) {
+              count++;
+            }
+          }
+
+          return count;
+        });
+
+        expect(bluePixels).toBeGreaterThan(50);
+      }
+
+      await page.waitForTimeout(80);
     }
 
     for (const key of held) {
-      if (!keys.has(key)) {
-        await page.keyboard.up(key);
-      }
+      await page.keyboard.up(key);
     }
 
-    for (const key of keys) {
-      if (!held.has(key)) {
-        await page.keyboard.down(key);
-      }
-    }
-
-    held = keys;
-
-    if (iteration % 30 === 0) {
-      const bluePixels = await page.locator('canvas').evaluate((canvas: HTMLCanvasElement) => {
-        const pixels = canvas
-          .getContext('2d')!
-          .getImageData(0, 0, canvas.width, canvas.height).data;
-
-        let count = 0;
-
-        for (let offset = 0; offset < pixels.length; offset += 4) {
-          if (pixels[offset] === 52 && pixels[offset + 1] === 120 && pixels[offset + 2] === 196) {
-            count++;
-          }
-        }
-
-        return count;
-      });
-
-      expect(bluePixels).toBeGreaterThan(50);
-    }
-
-    await page.waitForTimeout(80);
-  }
-
-  for (const key of held) {
-    await page.keyboard.up(key);
-  }
-
-  expect(target).toBe(points.length);
-  await page.screenshot({ path: 'test-results/expanded-city-route.png' });
-});
+    expect(target).toBe(points.length);
+    await page.screenshot({ path: `test-results/city-route-${block}.png` });
+  });
+}
 
 for (const [width, height] of [
   [1440, 900],
@@ -384,7 +419,11 @@ test('safe return snaps the camera while retaining the traffic and another pause
     return window.cityTest.world();
   });
 
-  await page.evaluate(() => window.cityTest.returnToRoad());
+  await page
+    .getByRole('group', { name: 'Управление поездкой' })
+    .getByRole('button', { name: 'Вернуться на дорогу', exact: true })
+    .focus();
+  await page.keyboard.press('Enter');
   await expect(page.getByText('Небольшая остановка')).toBeVisible();
 
   const returned = await page.evaluate(() => window.cityTest.world());
