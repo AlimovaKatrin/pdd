@@ -32,7 +32,10 @@ function WelcomeCard({ ready, onStart }: { ready: boolean; onStart: () => void }
         {ready ? 'Поехать в город' : 'Загружаем историю…'}
         <ArrowRight size={17} />
       </button>
-      <span className="desktop-note">Для компьютера · управление с клавиатуры</span>
+      <span className="desktop-note">Клавиатура · Chrome/Edge · окно от 1024×650</span>
+      <span className="desktop-note">
+        Пять групп правил, без других машин. Это не полный экзамен ПДД.
+      </span>
     </div>
   );
 }

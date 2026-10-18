@@ -26,6 +26,7 @@ export interface RoadMap {
   roads: Road[];
   stops: StopLine[];
   spawn: Point & { heading: number };
+  citySpeedLimit: { id: string; limit: number };
   speedZones?: SpeedZone[];
   signals?: TrafficSignal[];
   intersections?: Intersection[];
@@ -89,7 +90,10 @@ export function initialWorld(map: RoadMap): World {
     successfulManeuvers: 0,
     drivingProgress: { speed: {}, pedestrians: {} },
     speedEpisodes: Object.fromEntries(
-      (map.speedZones ?? []).map((z) => [z.id, { active: false, number: 1 }]),
+      [map.citySpeedLimit, ...(map.speedZones ?? [])].map((zone) => [
+        zone.id,
+        { active: false, number: 1 },
+      ]),
     ),
     signalEpisodes: Object.fromEntries(
       (map.signals ?? []).map((s) => [s.id, { phase: 'ready', stopped: false, number: 1 }]),
@@ -111,7 +115,7 @@ export const VEHICLE_LENGTH = 4.2;
 
 export const VEHICLE_WIDTH = 1.8;
 
-export const RULES_VERSION = 'mvp-preview-4';
+export const RULES_VERSION = 'mvp-preview-5';
 
 export interface StopViolation {
   type: 'stop';
@@ -128,6 +132,8 @@ export interface Cause {
   explanation: string;
   reference: string;
   referenceUrl?: string;
+  referenceCheckedOn?: string;
+  additionalReferences?: { label: string; url: string }[];
   facts: Record<string, string | number | boolean>;
 }
 

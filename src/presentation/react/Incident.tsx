@@ -129,6 +129,7 @@ export function Incident({
             answer={state.answer}
             revealed={state.revealed}
             onAnswer={(index) => session.answerQuestion(index)}
+            onReveal={() => session.reveal()}
           />
         </div>
       )}

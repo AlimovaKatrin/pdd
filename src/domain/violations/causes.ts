@@ -5,14 +5,20 @@ const descriptions: Record<CauseCode, [RuleType, string, string, string]> = {
   'stop-line': [
     'stop',
     'Проезд без остановки',
-    'Перед стоп-линией нужна полная остановка. Движение с малой скоростью её не заменяет.',
+    'Перед стоп-линией нужна полная остановка. Движение с малой скоростью её не заменяет. Затем убедитесь, что можно ехать: знак также требует уступить дорогу тем, у кого преимущество.',
     'Приложение 1 · знак 2.5',
   ],
   'speed-limit': [
     'speed',
     'Превышение скорости',
     'Соблюдайте действующий знак ограничения. Отсутствие штрафа за небольшое превышение не разрешает превышать лимит.',
-    'Приложение 1 · знак 3.24; п. 10.1',
+    'Приложение 1 · знак 3.24',
+  ],
+  'city-speed-limit': [
+    'speed',
+    'Превышение скорости в городе',
+    'На обычной улице населённого пункта без другого ограничения можно ехать не быстрее 60 км/ч. Снизьте скорость до лимита. В жилых, велосипедных зонах и дворах действует 20 км/ч; таких участков на этой карте нет.',
+    'Пункт 10.2',
   ],
   'red-signal': [
     'signal',
@@ -29,7 +35,7 @@ const descriptions: Record<CauseCode, [RuleType, string, string, string]> = {
   'wrong-indicator': [
     'indicator',
     'Неверное направление сигнала',
-    'Указатель должен соответствовать фактическому направлению поворота. Он не даёт преимущества.',
+    'До поворота включите указатель той стороны, в которую поворачиваете. Неверный сигнал вводит других в заблуждение. Указатель не даёт преимущества.',
     'Пункты 8.1, 8.2',
   ],
   'late-indicator': [
@@ -48,7 +54,7 @@ const descriptions: Record<CauseCode, [RuleType, string, string, string]> = {
     'pedestrian',
     'Помеха пешеходу на переходе',
     'Уступите пешеходу, имеющему преимущество: движение автомобиля не должно вынуждать его изменять скорость или направление.',
-    'Пункты 1.2, 14.1',
+    'Пункт 14.1',
   ],
 };
 
@@ -63,13 +69,34 @@ export function cause(code: CauseCode, facts: Cause['facts']): Cause {
     pedestrian: '7c45508e360f5b7b8ae1443d73feb01f52a6199d',
   };
 
+  const referenceId =
+    code === 'city-speed-limit' ? '803907f6876a655f77995888208488d4bfccf247' : links[rule];
+
+  const additionalReferences: Cause['additionalReferences'] = [];
+
+  if (code === 'speed-limit') {
+    additionalReferences.push({
+      label: 'Пункт 10.1',
+      url: 'https://www.consultant.ru/document/cons_doc_LAW_2709/803907f6876a655f77995888208488d4bfccf247/',
+    });
+  }
+
+  if (code === 'pedestrian-obstruction') {
+    additionalReferences.push({
+      label: 'Пункт 1.2 · уступить дорогу',
+      url: 'https://www.consultant.ru/document/cons_doc_LAW_2709/5894b193fda5648afe1c1a5e70c028f25cd29099/',
+    });
+  }
+
   return {
     code,
     rule,
     title,
     explanation,
     reference,
-    referenceUrl: `https://www.consultant.ru/document/cons_doc_LAW_2709/${links[rule]}/`,
+    referenceUrl: `https://www.consultant.ru/document/cons_doc_LAW_2709/${referenceId}/`,
+    referenceCheckedOn: '2026-10-14',
+    additionalReferences,
     facts,
   };
 }

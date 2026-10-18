@@ -77,6 +77,9 @@ it('migrates v1 without changing answers, assistance or the unanswered demo mate
   });
 
   expect(migrated.schemaVersion).toBe(2);
+  expect(
+    migrated.violations.every((entry) => entry.causes[0].referenceCheckedOn === undefined),
+  ).toBe(true);
   expect(migrated.answers).toEqual([answer]);
   expect(migrated.revealed).toEqual(['old']);
   expect(

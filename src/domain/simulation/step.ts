@@ -9,6 +9,11 @@ import { type Controls, type RoadMap, type DetectedViolation, type World } from 
 
 export const STEP = 1 / 60;
 
+// Technical ceiling of 72 km/h makes the city limit reachable during ordinary play.
+const MAX_FORWARD_SPEED_METERS_PER_SECOND = 20;
+
+const MAX_REVERSE_SPEED_METERS_PER_SECOND = 3;
+
 export function stepWorld(
   world: World,
   controls: Controls,
@@ -26,7 +31,10 @@ export function stepWorld(
     v.speed = Math.sign(v.speed) * Math.max(0, Math.abs(v.speed) - 1.4 * STEP);
   }
 
-  v.speed = Math.max(-3, Math.min(12, v.speed));
+  v.speed = Math.max(
+    -MAX_REVERSE_SPEED_METERS_PER_SECOND,
+    Math.min(MAX_FORWARD_SPEED_METERS_PER_SECOND, v.speed),
+  );
 
   const rotation = ((controls.steer * v.speed) / 5.5) * STEP;
 

@@ -4,6 +4,7 @@ import { neighborhood } from '../../src/content/maps/neighborhood';
 import { localContent } from '../../src/adapters/content/local';
 import { emptyControls, emptyHistory, type History } from '../../src/domain/world/model';
 import type { HistoryRepository } from '../../src/use-cases/ports';
+import { validateHistory } from '../../src/adapters/persistence/history-validation';
 
 let counter = 0;
 
@@ -41,6 +42,95 @@ function driveToViolation(s: GameSession) {
 
   expect(s.getSnapshot().current).not.toBeNull();
 }
+
+it('runs city speeding through pause, retry, braking, rearming and persisted history', async () => {
+  const map = {
+    ...neighborhood,
+    spawn: { x: 107.5, y: 87, heading: -Math.PI / 2 },
+    signals: [],
+  };
+
+  const repository = new MemoryHistory();
+
+  const session = new GameSession(map, repository, localContent, {
+    id: () => String(++counter),
+    date: () => '2026-10-14T12:00:00Z',
+  });
+
+  await session.initialize();
+  session.start();
+  expect(session.getSnapshot().driving.speedLimit).toBe(60);
+  driveToViolation(session);
+
+  const first = session.getSnapshot().current!;
+
+  expect(first.causes[0].code).toBe('city-speed-limit');
+  expect(first.speed * 3.6).toBeGreaterThan(60);
+  expect(first.material).toBeNull();
+  expect(first.causes[0].referenceCheckedOn).toBe('2026-10-14');
+
+  const paused = session.getWorld();
+
+  session.step();
+  expect(session.getWorld()).toEqual(paused);
+  session.retry();
+  expect(session.getSnapshot().current).toBeNull();
+  expect(session.getWorld().tick).toBeLessThan(paused.tick);
+  driveToViolation(session);
+  expect(session.getSnapshot().current!.attemptId).not.toBe(first.attemptId);
+  session.continueTrip();
+  session.setControls({ ...emptyControls(), throttle: true });
+
+  for (let tick = 0; tick < 30; tick++) {
+    session.step();
+  }
+
+  expect(session.getSnapshot().current).toBeNull();
+  expect(session.getSnapshot().history.violations).toHaveLength(2);
+  session.setControls({ ...emptyControls(), brake: true });
+
+  while (session.getWorld().vehicle.speed >= 60 / 3.6) {
+    session.step();
+  }
+
+  driveToViolation(session);
+  expect(session.getSnapshot().current!.episode).toBe(2);
+  await session.flushPersistence();
+  expect(validateHistory(repository.history).violations).toHaveLength(3);
+  expect(repository.history.answers).toEqual([]);
+  expect(repository.history.violations[0].causes[0]).toEqual(first.causes[0]);
+  session.returnToRoad();
+  expect(session.getSnapshot().driving.speedLimit).toBe(60);
+  expect(session.getSnapshot().driving.speedKmh).toBe(0);
+});
+
+it('publishes the same signed and city limits that the simulation applies', async () => {
+  const map = {
+    ...neighborhood,
+    spawn: { x: 30, y: 21, heading: 0 },
+  };
+
+  const session = new GameSession(map, new MemoryHistory(), localContent, {
+    id: () => String(++counter),
+    date: () => '2026-10-14T12:00:00Z',
+  });
+
+  await session.initialize();
+  session.start();
+  expect(session.getSnapshot().driving.speedLimit).toBe(60);
+  driveToViolation(session);
+  expect(session.getSnapshot().driving.speedLimit).toBe(30);
+  expect(session.getSnapshot().current!.causes[0].code).toBe('speed-limit');
+  session.continueTrip();
+  session.setControls({ ...emptyControls(), throttle: true });
+
+  for (let tick = 0; tick < 180 && session.getSnapshot().driving.speedLimit === 30; tick++) {
+    session.step();
+  }
+
+  expect(session.getSnapshot().current).toBeNull();
+  expect(session.getSnapshot().driving.speedLimit).toBe(60);
+});
 
 beforeEach(() => {
   counter = 0;

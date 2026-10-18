@@ -47,7 +47,7 @@ export function Dashboard({
         </button>
       </div>
       <span className="speed-limit" aria-label="Ограничение скорости">
-        {limit ?? '—'}
+        {limit}
       </span>
       <span className="drive-state">
         <span className={paused ? 'dot amber' : 'dot'} />

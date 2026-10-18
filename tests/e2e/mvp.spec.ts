@@ -3,6 +3,7 @@ import { emptyHistory, type History } from '../../src/domain/world/model';
 import { stopQuestion } from '../../src/content/questions/stop';
 import { trafficQuestions } from '../../src/content/questions/traffic';
 import { cause } from '../../src/domain/violations/causes';
+import { CAUSE_CODES } from '../../src/domain/learning/question-types';
 
 async function seed(page: Page, history: History) {
   await page.goto('/');
@@ -91,6 +92,77 @@ async function fits(page: Page) {
 
   expect(layout).toEqual({ inside: true, scroll: false, clipped: false });
 }
+
+test('every cause has its own readable explanation and checked source without a question', async ({
+  page,
+}) => {
+  const data = fixture(CAUSE_CODES.length);
+
+  data.violations = data.violations.map((entry, index) => {
+    const reason = cause(CAUSE_CODES[index], { speedKmh: 65, limitKmh: 60, intendedSpeed: 1.2 });
+
+    return { ...entry, type: reason.rule, causes: [reason], material: null };
+  });
+  await seed(page, data);
+
+  for (const entry of data.violations) {
+    await page.locator(`[data-entry-id="${entry.id}"]`).click();
+    await expect(page.getByText(/Проверено: 2026-10-14/)).toBeVisible();
+    await expect(
+      page.getByRole('link', { name: `ПДД РФ · ${entry.causes[0].reference}`, exact: true }),
+    ).toHaveAttribute('href', entry.causes[0].referenceUrl!);
+
+    for (const [width, height] of [
+      [1280, 720],
+      [390, 844],
+    ]) {
+      await page.setViewportSize({ width, height });
+      await fits(page);
+    }
+
+    await page.getByRole('button', { name: 'Назад в журнал' }).click();
+  }
+});
+
+test('mixed causes use their own sources while preserving the original question explanation', async ({
+  page,
+}) => {
+  const data = fixture();
+
+  data.violations[0].causes.push(cause('speed-limit', { speedKmh: 40, limitKmh: 30 }));
+  await seed(page, data);
+  await page.locator('.journal-list > button').click();
+  await page.getByRole('button', { name: 'Показать разбор', exact: true }).click();
+  await page.getByRole('button', { name: 'Причина: вперёд' }).click();
+  await expect(page.getByRole('link', { name: 'ПДД РФ · Приложение 1 · знак 3.24' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'ПДД РФ · Пункт 10.1' })).toBeVisible();
+  await expect(page.getByRole('link', { name: /знак 2.5/i })).toHaveCount(0);
+  await expect(page.getByText(/Лимит: 30 км\/ч/)).toBeVisible();
+  await page.setViewportSize({ width: 390, height: 844 });
+  await fits(page);
+  await page.getByRole('button', { name: 'Вопрос', exact: true }).click();
+  await page.getByRole('button', { name: 'Объяснение вопроса', exact: true }).click();
+  await expect(page.getByText(stopQuestion.explanation, { exact: false })).toBeVisible();
+  await fits(page);
+});
+
+test('a journal with 1000 incidents keeps the last record reachable and restores its position', async ({
+  page,
+}) => {
+  await seed(page, fixture(1000));
+
+  const list = page.locator('.journal-list');
+
+  await expect(list.getByRole('button')).toHaveCount(1000);
+  await list.getByRole('button').last().scrollIntoViewIfNeeded();
+
+  const scroll = await list.evaluate((element) => element.scrollTop);
+
+  await list.getByRole('button').last().click();
+  await page.getByRole('button', { name: 'Назад в журнал' }).click();
+  await expect(list.getByRole('button').last()).toBeFocused();
+  expect(await list.evaluate((element) => element.scrollTop)).toBe(scroll);
+});
 
 test('scrollable journal, filters, attempt history and keyboard return preserve position', async ({
   page,
@@ -286,6 +358,7 @@ test('speed limit stays visible despite legacy settings and a clean trip has its
   await page.reload();
   await page.getByRole('button', { name: 'Поехать в город', exact: true }).click();
   await expect(page.locator('.dashboard .speed-limit')).toBeVisible();
+  await expect(page.locator('.dashboard .speed-limit')).toHaveText('60');
   await expect(page.locator('#road')).toBeFocused();
   await page.keyboard.press('Escape');
   await expect(page.getByRole('checkbox')).toHaveCount(0);
@@ -296,6 +369,49 @@ test('speed limit stays visible despite legacy settings and a clean trip has its
   await page.getByRole('button', { name: 'Да, удалить' }).click();
   await expect(page.getByText('Всего: 0 поездок · 0 нарушений · 0 ответов')).toBeVisible();
 });
+test('city speed violation is reachable by driving and remains readable without a question', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Поехать в город', exact: true }).click();
+  await page.keyboard.down('KeyW');
+  await expect(page.getByRole('dialog', { name: 'Разбор нарушения' })).toBeVisible({
+    timeout: 12000,
+  });
+  await page.keyboard.up('KeyW');
+  await page.getByRole('button', { name: 'Продолжить', exact: true }).click();
+  await page.keyboard.down('KeyW');
+  await expect(page.getByRole('heading', { name: 'Превышение скорости в городе' })).toBeVisible({
+    timeout: 12000,
+  });
+  await page.keyboard.up('KeyW');
+  await expect(page.getByRole('link', { name: 'ПДД РФ · Пункт 10.2' })).toHaveAttribute(
+    'href',
+    'https://www.consultant.ru/document/cons_doc_LAW_2709/803907f6876a655f77995888208488d4bfccf247/',
+  );
+  await expect(page.getByText(/Проверено: 2026-10-14/)).toBeVisible();
+  await expect(page.getByText(/Лимит: 60 км\/ч/)).toBeVisible();
+
+  for (const [width, height] of [
+    [1280, 720],
+    [1024, 650],
+    [600, 700],
+    [390, 844],
+  ]) {
+    await page.setViewportSize({ width, height });
+    await fits(page);
+  }
+
+  await page.screenshot({ path: 'test-results/city-speed-review.png' });
+  await page.getByRole('button', { name: 'Продолжить', exact: true }).click();
+  await expect(page.getByRole('dialog')).toBeHidden();
+  await page.reload();
+  await page.getByRole('button', { name: /^Журнал/ }).click();
+  await page.getByRole('button', { name: /Превышение скорости в городе/ }).click();
+  await expect(page.getByRole('link', { name: 'ПДД РФ · Пункт 10.2' })).toBeVisible();
+  await expect(page.getByText(/Проверено: 2026-10-14/)).toBeVisible();
+});
+
 test('pause and keyboard indicator toggle remain usable in a compact viewport', async ({
   page,
 }) => {

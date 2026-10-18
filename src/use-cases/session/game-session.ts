@@ -1,4 +1,4 @@
-import { activeSpeedZone } from '../../domain/world/traffic';
+import { activeSpeedLimit } from '../../domain/world/traffic';
 import type { ReadonlyData } from '../../domain/world/read-only';
 import { freezeSnapshot } from './read-only-snapshot';
 import { validateMap } from '../../domain/world/validate-map';
@@ -40,7 +40,7 @@ export type SessionSnapshot = ReadonlyData<{
   started: boolean;
   driving: {
     speedKmh: number;
-    speedLimit: number | null;
+    speedLimit: number;
     indicator: Indicator;
     reversing: boolean;
     successfulManeuvers: number;
@@ -198,7 +198,7 @@ export class GameSession {
       started: this.started,
       driving: {
         speedKmh: Math.round(Math.abs(this.world.vehicle.speed) * 3.6),
-        speedLimit: activeSpeedZone(this.mapData, this.world.vehicle)?.limit ?? null,
+        speedLimit: activeSpeedLimit(this.mapData, this.world.vehicle).limit,
         indicator: this.world.vehicle.indicator,
         reversing: this.world.vehicle.speed < 0,
         successfulManeuvers: this.world.successfulManeuvers,

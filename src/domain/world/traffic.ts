@@ -34,6 +34,11 @@ export function activeSpeedZone(map: ReadonlyData<RoadMap>, vehicle: Vehicle) {
     .sort((a, b) => a.limit - b.limit)[0];
 }
 
+/** The current map contains ordinary city streets; special limits come from signed zones. */
+export function activeSpeedLimit(map: ReadonlyData<RoadMap>, vehicle: Vehicle) {
+  return activeSpeedZone(map, vehicle) ?? map.citySpeedLimit;
+}
+
 export function angleDifference(a: number, b: number) {
   return Math.atan2(Math.sin(a - b), Math.cos(a - b));
 }

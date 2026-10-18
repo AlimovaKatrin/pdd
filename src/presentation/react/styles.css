@@ -1827,6 +1827,30 @@ kbd {
   display: none;
 }
 
+/* При сильном увеличении доступность текста важнее одного экрана. */
+@media (height <= 600px) {
+  .app {
+    height: auto;
+    min-height: 100dvh;
+  }
+
+  .map-card {
+    min-height: 280px;
+  }
+
+  .modal-backdrop {
+    align-items: flex-start;
+    overflow-y: auto;
+    padding: 12px;
+  }
+
+  .welcome,
+  .pause-card {
+    max-height: calc(100dvh - 24px);
+    overflow-y: auto;
+  }
+}
+
 @media (width <= 640px) {
   .compact-review-tabs {
     display: flex;

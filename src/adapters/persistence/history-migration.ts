@@ -76,9 +76,14 @@ export function migrateHistory(value: unknown): History {
           answer.contentVersion === archivedStopQuestion.version,
       );
 
+    const legacyCause = cause('stop-line', { speedKmh: violation.speed * 3.6 });
+
+    // В v1 дата сверки не сохранялась. Новая проверка не датирует старую запись.
+    delete legacyCause.referenceCheckedOn;
+
     return {
       ...violation,
-      causes: [cause('stop-line', { speedKmh: violation.speed * 3.6 })],
+      causes: [legacyCause],
       material: hasKnownMaterial ? structuredClone(archivedStopQuestion) : null,
       ...(!hasKnownMaterial && {
         materialUnavailable: 'Историческая версия материала не найдена.',

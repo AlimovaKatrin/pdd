@@ -21,6 +21,7 @@ export function validateMap(map: RoadMap): RoadMap {
     Math.abs((s.b.x - s.a.x) * s.direction.x + (s.b.y - s.a.y) * s.direction.y) < 1e-6;
 
   const all = [
+    map.citySpeedLimit,
     ...map.stops,
     ...(map.speedZones ?? []),
     ...(map.signals ?? []),
@@ -30,6 +31,8 @@ export function validateMap(map: RoadMap): RoadMap {
 
   if (
     !map.version ||
+    !map.citySpeedLimit ||
+    !positive(map.citySpeedLimit.limit) ||
     !positive(map.width) ||
     !positive(map.height) ||
     !point(map.spawn) ||

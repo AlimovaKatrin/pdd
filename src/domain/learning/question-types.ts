@@ -5,6 +5,7 @@ export type RuleType = (typeof RULE_TYPES)[number];
 export const CAUSE_CODES = [
   'stop-line',
   'speed-limit',
+  'city-speed-limit',
   'red-signal',
   'missing-indicator',
   'wrong-indicator',

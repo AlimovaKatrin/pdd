@@ -45,48 +45,53 @@ export function IncidentContext({
             <div className="explanation">
               <strong>Почему так</strong>
               <br />
-              <PagedText
-                text={
-                  current.causes.length > 1
-                    ? `${selectedCause.explanation} ${question.explanation}`
-                    : question.explanation
-                }
-              />
+              <PagedText key={selectedCause.code} text={selectedCause.explanation} />
             </div>
           ) : (
             <button className="text-button reveal-answer" onClick={onReveal}>
               Показать разбор <ChevronRight size={15} />
             </button>
           )}
-          <a
-            className="source-link"
-            href={question.reference.url}
-            target="_blank"
-            rel="noreferrer"
-            onClick={onReveal}
-          >
-            {question.reference.label}
-            <ArrowUpRight size={14} />
-          </a>
-          <p className="source-note">{question.reference.verification}</p>
         </>
       ) : (
         <>
           <p>
-            <PagedText text={selectedCause.explanation} />
+            <PagedText key={selectedCause.code} text={selectedCause.explanation} />
           </p>
-          <a
-            className="source-link"
-            href={selectedCause.referenceUrl}
-            target="_blank"
-            rel="noreferrer"
-          >
-            ПДД РФ · {selectedCause.reference}
-          </a>
-          <p className="source-note">Объяснение авторское · КонсультантПлюс</p>
         </>
       )}
-      {current.type !== 'stop' && <p className="source-note">{formatCauseFacts(selectedCause)}</p>}
+      <a
+        className="source-link"
+        href={selectedCause.referenceUrl}
+        target="_blank"
+        rel="noreferrer"
+        onClick={onReveal}
+      >
+        ПДД РФ · {selectedCause.reference}
+        <ArrowUpRight size={14} />
+      </a>
+      {selectedCause.additionalReferences?.map((reference) => (
+        <a
+          key={reference.url}
+          className="source-link"
+          href={reference.url}
+          target="_blank"
+          rel="noreferrer"
+          onClick={onReveal}
+        >
+          ПДД РФ · {reference.label}
+          <ArrowUpRight size={14} />
+        </a>
+      ))}
+      <p className="source-note">
+        Объяснение авторское · КонсультантПлюс · Постановление № 1090 ·{' '}
+        {selectedCause.referenceCheckedOn
+          ? `Проверено: ${selectedCause.referenceCheckedOn}`
+          : 'Дата проверки в архивной записи не указана'}
+      </p>
+      {selectedCause.rule !== 'stop' && (
+        <p className="source-note">{formatCauseFacts(selectedCause)}</p>
+      )}
     </section>
   );
 }

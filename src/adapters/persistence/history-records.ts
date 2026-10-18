@@ -57,6 +57,18 @@ function isCause(value: unknown): value is Cause {
     RULE_TYPES.some((rule) => rule === value.rule) &&
     (value.referenceUrl === undefined ||
       (typeof value.referenceUrl === 'string' && value.referenceUrl.startsWith('https://'))) &&
+    (value.referenceCheckedOn === undefined ||
+      (typeof value.referenceCheckedOn === 'string' &&
+        /^\d{4}-\d{2}-\d{2}$/.test(value.referenceCheckedOn))) &&
+    (value.additionalReferences === undefined ||
+      (Array.isArray(value.additionalReferences) &&
+        value.additionalReferences.every(
+          (reference: unknown) =>
+            isObject(reference) &&
+            typeof reference.label === 'string' &&
+            typeof reference.url === 'string' &&
+            reference.url.startsWith('https://'),
+        ))) &&
     isObject(value.facts) &&
     Object.values(value.facts).every(
       (fact) =>

@@ -1,7 +1,7 @@
 import type { RoadMap } from '../../domain/world/model';
 
 export const neighborhood: RoadMap = {
-  version: 'neighborhood-2',
+  version: 'neighborhood-3',
   width: 120,
   height: 100,
   roads: [
@@ -9,6 +9,7 @@ export const neighborhood: RoadMap = {
     ...[18, 50, 84].map((y) => ({ x: 17, y: y - 7, width: 94, height: 14 })),
   ],
   spawn: { x: 67.5, y: 78, heading: -Math.PI / 2 },
+  citySpeedLimit: { id: 'city-60', limit: 60 },
   speedZones: [
     {
       id: 'east-30',
