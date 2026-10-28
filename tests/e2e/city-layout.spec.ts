@@ -5,6 +5,78 @@ import { join } from 'node:path';
 import { cityJournal, cityJournalCauses } from '../fixtures/city-journal';
 import { dialogFits, loadJournalFixture } from './journal-fixture';
 
+test('city guide shows every supported rule and fits all desktop layouts', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Поехать в город', exact: true }).click();
+
+  const guide = page.getByRole('region', { name: 'ЗНАКОМИМСЯ С ГОРОДОМ' });
+
+  const topics = [
+    ['STOP', 'Остановка перед STOP'],
+    ['Скорость', 'Соблюдайте ограничение'],
+    ['Светофор', 'Дождитесь зелёного'],
+    ['Поворот', 'Покажите направление'],
+    ['Пешеход', 'Уступите пешеходу'],
+    ['Встречная полоса', 'Оставайтесь на своей полосе'],
+    ['Левый поворот', 'Пропустите встречных'],
+    ['Главная дорога', 'Уступите главной дороге'],
+    ['Помеха справа', 'Пропустите машину справа'],
+    ['Завершение проезда', 'Дайте закончить движение'],
+  ];
+
+  for (const [width, height] of [
+    [1440, 900],
+    [1280, 720],
+    [1024, 650],
+    [800, 800],
+    [700, 700],
+  ]) {
+    await page.setViewportSize({ width, height });
+    await expect(guide.locator('.guide-topics button')).toHaveCount(topics.length);
+
+    const bounds = await guide.boundingBox();
+
+    for (const [index, [label, title]] of topics.entries()) {
+      const button = guide.getByRole('button', { name: label, exact: true });
+
+      await button.focus();
+      await button.press('Space');
+      await expect(button).toBeFocused();
+      await expect(button).toHaveAttribute('aria-pressed', 'true');
+      await expect(button).toHaveCSS('background-color', 'rgb(36, 92, 70)');
+      await expect(guide.locator('[aria-pressed="true"]')).toHaveCount(1);
+      await expect(guide.getByRole('heading', { name: title, exact: true })).toBeVisible();
+      await expect(guide.getByLabel(`Ситуация ${index + 1} из 10`, { exact: true })).toBeVisible();
+      expect(await guide.boundingBox()).toEqual(bounds);
+      expect(
+        await guide.evaluate((element) => {
+          const card = element.getBoundingClientRect();
+
+          return [...element.querySelectorAll('button, h2, p, .guide-heading')].every((child) => {
+            const box = child.getBoundingClientRect();
+
+            return (
+              box.left >= card.left &&
+              box.right <= card.right &&
+              box.top >= card.top &&
+              box.bottom <= card.bottom
+            );
+          });
+        }),
+      ).toBe(true);
+    }
+
+    expect(
+      await page.evaluate(
+        () =>
+          document.documentElement.scrollHeight <= innerHeight &&
+          document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+    await page.screenshot({ path: `test-results/city-guide-${width}-${height}.png` });
+  }
+});
+
 test('desktop city reviews and a thousand records fit, retain scroll and restore focus', async ({
   page,
 }) => {
