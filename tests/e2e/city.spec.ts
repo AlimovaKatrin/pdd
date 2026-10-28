@@ -388,6 +388,8 @@ for (const [width, height] of [
     await page.goto('/');
     await expect(page.locator('canvas')).toBeVisible();
 
+    await expectCanvasFillsMap(page);
+
     const initial = await page.locator('canvas').boundingBox();
 
     await page.getByRole('button', { name: 'Поехать в город', exact: true }).click();
@@ -403,6 +405,57 @@ for (const [width, height] of [
     await page.screenshot({ path: `test-results/city-${width}-${height}.png` });
   });
 }
+
+async function expectCanvasFillsMap(page: Page) {
+  await expect
+    .poll(async () => {
+      const canvas = await page.locator('canvas').boundingBox();
+
+      const map = await page.locator('.phaser-world').boundingBox();
+
+      if (!canvas || !map) {
+        return false;
+      }
+
+      return (
+        Math.abs(canvas.x - map.x) < 1 &&
+        Math.abs(canvas.y - map.y) < 1 &&
+        Math.abs(canvas.width - map.width) < 1 &&
+        Math.abs(canvas.height - map.height) < 1
+      );
+    })
+    .toBe(true);
+}
+
+test('camera fills the map after resizing a paused trip', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Поехать в город', exact: true }).click();
+  await page.getByRole('button', { name: 'Пауза', exact: true }).click();
+
+  for (const [width, height] of [
+    [1024, 650],
+    [700, 700],
+    [1440, 900],
+  ]) {
+    await page.setViewportSize({ width, height });
+    await expectCanvasFillsMap(page);
+    await expect(page.getByText('Небольшая остановка')).toBeVisible();
+
+    const scale = await page.locator('canvas').evaluate((canvas: HTMLCanvasElement) => {
+      const bounds = canvas.getBoundingClientRect();
+
+      return { x: bounds.width / canvas.width, y: bounds.height / canvas.height };
+    });
+
+    expect(scale.x).toBeCloseTo(1, 2);
+    expect(scale.y).toBeCloseTo(1, 2);
+
+    const pixels = await canvasPixels(page);
+
+    await page.waitForTimeout(200);
+    expect(await canvasPixels(page)).toBe(pixels);
+  }
+});
 
 test('safe return snaps the camera while retaining the traffic and another pause', async ({
   page,

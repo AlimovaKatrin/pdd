@@ -109,7 +109,11 @@ export function mountCity(parent: HTMLElement, session: GameSession) {
     audio: { noAudio: true },
     // Input belongs to the application adapter; Phaser only renders the world.
     input: { keyboard: false, mouse: false, touch: false, gamepad: false },
-    scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
+    scale: {
+      // Resize the view, keeping road and vehicle sizes; fit the legacy map in full.
+      mode: session.map.network ? Phaser.Scale.RESIZE : Phaser.Scale.FIT,
+      autoCenter: Phaser.Scale.CENTER_BOTH,
+    },
     render: { antialias: true },
     fps: { target: 60 },
   });
