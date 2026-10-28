@@ -1,3 +1,4 @@
+import { pedestrianMayStart } from '../world/pedestrian-duty';
 import { checkPedestrians, predictsPedestrianConflict } from '../rules/pedestrians';
 import type { Crossing, PedestrianState, RoadMap, Vehicle, World } from '../world/model';
 
@@ -6,6 +7,8 @@ function advancePedestrian(
   crossing: Crossing,
   vehicle: Vehicle,
   stepSeconds: number,
+  map: RoadMap,
+  tick: number,
 ): PedestrianState {
   const pedestrian: PedestrianState = { ...previous, reaction: null };
 
@@ -16,9 +19,18 @@ function advancePedestrian(
       pedestrian.progress = 0;
       pedestrian.episode++;
       pedestrian.obstructed = false;
+      pedestrian.startedTick = null;
     }
 
     return pedestrian;
+  }
+
+  if (pedestrian.progress === 0) {
+    if (!pedestrianMayStart(crossing, map, tick)) {
+      return pedestrian;
+    }
+
+    pedestrian.startedTick = tick;
   }
 
   if (predictsPedestrianConflict(crossing, pedestrian, vehicle)) {
@@ -50,6 +62,8 @@ export function stepPedestrians(previous: World, next: World, map: RoadMap, step
       crossing,
       next.vehicle,
       stepSeconds,
+      map,
+      previous.tick,
     );
   }
 

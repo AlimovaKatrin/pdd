@@ -3,7 +3,9 @@ import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-test('real browser zoom at 125–200% preserves reading, keyboard focus and continuation', async () => {
+test('real browser zoom at 125–200% preserves reading, keyboard focus and continuation', async ({
+  baseURL,
+}) => {
   const extension = await mkdtemp(join(tmpdir(), 'pdd-zoom-'));
 
   await writeFile(
@@ -30,28 +32,31 @@ test('real browser zoom at 125–200% preserves reading, keyboard focus and cont
 
     const page = await context.newPage();
 
-    await page.goto('http://127.0.0.1:5173');
+    await page.goto(baseURL!);
 
     for (const zoom of [1.25, 1.5, 2]) {
       // Execute the browser extension API in its worker, not in the game page.
-      await worker.evaluate(async (factor) => {
-        const api = (
-          globalThis as unknown as {
-            chrome: {
-              tabs: {
-                query: (query: object) => Promise<{ id: number; url?: string }[]>;
-                setZoom: (id: number, zoom: number) => Promise<void>;
+      await worker.evaluate(
+        async ({ factor, url }) => {
+          const api = (
+            globalThis as unknown as {
+              chrome: {
+                tabs: {
+                  query: (query: object) => Promise<{ id: number; url?: string }[]>;
+                  setZoom: (id: number, zoom: number) => Promise<void>;
+                };
               };
-            };
-          }
-        ).chrome;
+            }
+          ).chrome;
 
-        const tabs = await api.tabs.query({});
+          const tabs = await api.tabs.query({});
 
-        const tab = tabs.find((candidate) => candidate.url?.startsWith('http://127.0.0.1:5173'))!;
+          const tab = tabs.find((candidate) => candidate.url?.startsWith(url))!;
 
-        await api.tabs.setZoom(tab.id, factor);
-      }, zoom);
+          await api.tabs.setZoom(tab.id, factor);
+        },
+        { factor: zoom, url: baseURL! },
+      );
       await expect.poll(() => page.evaluate(() => innerWidth)).toBe(Math.round(1440 / zoom));
       await page.getByRole('button', { name: 'Поехать в город', exact: true }).click();
       await page.keyboard.down('KeyW');

@@ -1,5 +1,6 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
+import { expandedCity } from '../content/maps/expanded-city';
 import { neighborhood } from '../content/maps/neighborhood';
 import { localContent } from '../adapters/content/local';
 import { IndexedDbHistory } from '../adapters/persistence/indexed-db';
@@ -18,10 +19,15 @@ import '@fontsource/manrope/latin-600.css';
 import '@fontsource/manrope/latin-700.css';
 import '../presentation/react/styles.css';
 
-const session = new GameSession(neighborhood, new IndexedDbHistory(), localContent, {
-  id: () => crypto.randomUUID(),
-  date: () => new Date().toISOString(),
-});
+const session = new GameSession(
+  import.meta.env.VITE_LEGACY_MAP === '1' ? neighborhood : expandedCity,
+  new IndexedDbHistory(),
+  localContent,
+  {
+    id: () => crypto.randomUUID(),
+    date: () => new Date().toISOString(),
+  },
+);
 
 const unbind = bindKeyboard(session);
 

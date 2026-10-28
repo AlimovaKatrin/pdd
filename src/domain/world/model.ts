@@ -1,9 +1,16 @@
 import type { CauseCode, Question, RuleType } from '../learning/question-types';
 
-export interface Point {
-  x: number;
-  y: number;
-}
+import type { Vehicle, TrafficState, Indicator } from './vehicles';
+import { createTraffic } from './traffic-state';
+
+export { VEHICLE_LENGTH, VEHICLE_WIDTH } from './vehicles';
+
+export type { Vehicle, Indicator } from './vehicles';
+
+import type { Point } from './point';
+import type { RoadNetwork } from './road-network';
+
+export type { Point } from './point';
 
 export interface Road {
   x: number;
@@ -24,22 +31,14 @@ export interface RoadMap {
   width: number;
   height: number;
   roads: Road[];
+  network?: RoadNetwork;
   stops: StopLine[];
   spawn: Point & { heading: number };
-  citySpeedLimit: { id: string; limit: number };
+  citySpeedLimit: { id: string; limit: number; reference: '10.2' };
   speedZones?: SpeedZone[];
   signals?: TrafficSignal[];
   intersections?: Intersection[];
   crossings?: Crossing[];
-}
-
-export type Indicator = 'left' | 'right' | null;
-
-export interface Vehicle extends Point {
-  heading: number;
-  speed: number;
-  indicator: Indicator;
-  indicatorTurn: number;
 }
 
 export interface StopEpisode {
@@ -48,15 +47,31 @@ export interface StopEpisode {
   number: number;
 }
 
+export interface JunctionPassage {
+  junctionId: string;
+  incomingLaneId: string;
+  connectionId: string;
+  entryHeading: number;
+  enteredTick: number | null;
+  entrySignal: SignalColor | null;
+  episode: number;
+  reported: string[];
+}
+
 export interface World {
   tick: number;
+  relocation: number;
   vehicle: Vehicle;
+  traffic: TrafficState;
   stops: Record<string, StopEpisode>;
   successfulManeuvers: number;
   drivingProgress: {
     speed: Record<string, { valid: boolean }>;
     pedestrians: Record<string, { episode: number; valid: boolean; credited: boolean }>;
   };
+  junctionPassage: JunctionPassage | null;
+  passageNumber: number;
+  oncomingEpisode: { active: boolean; number: number };
   speedEpisodes: Record<string, { active: boolean; number: number }>;
   signalEpisodes: Record<string, StopEpisode>;
   maneuver: Maneuver | null;
@@ -83,12 +98,17 @@ export const emptyControls = (): Controls => ({
 export function initialWorld(map: RoadMap): World {
   return {
     tick: 0,
+    relocation: 0,
+    traffic: createTraffic(map.network, map.spawn),
     vehicle: { ...map.spawn, speed: 0, indicator: null, indicatorTurn: 0 },
     stops: Object.fromEntries(
       map.stops.map((s) => [s.id, { phase: 'ready', stopped: false, number: 1 }]),
     ),
     successfulManeuvers: 0,
     drivingProgress: { speed: {}, pedestrians: {} },
+    junctionPassage: null,
+    passageNumber: 0,
+    oncomingEpisode: { active: false, number: 1 },
     speedEpisodes: Object.fromEntries(
       [map.citySpeedLimit, ...(map.speedZones ?? [])].map((zone) => [
         zone.id,
@@ -103,7 +123,14 @@ export function initialWorld(map: RoadMap): World {
     pedestrians: Object.fromEntries(
       (map.crossings ?? []).map((c) => [
         c.id,
-        { progress: 0, waiting: 0, episode: 1, obstructed: false, reaction: null },
+        {
+          progress: 0,
+          waiting: c.initialWaitTicks ?? 0,
+          episode: 1,
+          obstructed: false,
+          reaction: null,
+          startedTick: null,
+        },
       ]),
     ),
     advisories: [],
@@ -111,11 +138,7 @@ export function initialWorld(map: RoadMap): World {
   };
 }
 
-export const VEHICLE_LENGTH = 4.2;
-
-export const VEHICLE_WIDTH = 1.8;
-
-export const RULES_VERSION = 'mvp-preview-5';
+export const RULES_VERSION = 'city-preview-1';
 
 export interface StopViolation {
   type: 'stop';
@@ -223,6 +246,7 @@ export interface Intersection extends Point {
 }
 
 export interface Maneuver {
+  valid: boolean;
   intersectionId: string;
   episode: number;
   entryHeading: number;
@@ -237,11 +261,16 @@ export interface Maneuver {
 
 export interface Crossing {
   id: string;
+  label?: string;
   line: StopLine;
   from: Point;
   to: Point;
   speed: number;
   restartTicks: number;
+  initialWaitTicks?: number;
+  signalId?: string;
+  junctionId?: string;
+  outgoingLaneId?: string;
 }
 
 export interface PedestrianState {
@@ -250,4 +279,5 @@ export interface PedestrianState {
   episode: number;
   obstructed: boolean;
   reaction: 'vehicle' | null;
+  startedTick?: number | null;
 }

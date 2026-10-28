@@ -451,6 +451,27 @@ p {
   letter-spacing: 1.2px;
 }
 
+.guide-heading {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+}
+
+.guide-count {
+  flex: none;
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+.city-guide-expanded .guide-content {
+  min-height: 120px;
+}
+
+.city-guide-expanded .guide-topics {
+  margin: 8px 0;
+}
+
 .guide-topics {
   display: grid;
   gap: 8px;
@@ -1524,6 +1545,17 @@ kbd {
   display: grid;
   gap: 24px;
   grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+}
+
+.cause-facts {
+  color: var(--color-text);
+  font-size: 14px;
+  line-height: 1.6;
+  margin: 12px 0;
+}
+
+.incident-grid.explanation-only {
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .incident-context,

@@ -110,6 +110,7 @@ function getOrStartManeuver(previous: World, next: World, map: RoadMap): Maneuve
   next.maneuverNumber++;
 
   return {
+    valid: true,
     intersectionId: intersection.id,
     episode: next.maneuverNumber,
     entryHeading: previous.vehicle.heading,

@@ -93,6 +93,60 @@ async function fits(page: Page) {
   expect(layout).toEqual({ inside: true, scroll: false, clipped: false });
 }
 
+test('new journal filters retain historic participants, sources and keyboard focus', async ({
+  page,
+}) => {
+  const data = fixture(3);
+
+  data.violations[0] = {
+    ...data.violations[0],
+    type: 'priority',
+    material: null,
+    mapVersion: 'retired-city',
+    causes: [
+      cause('priority-main', {
+        participantId: 'retired-car',
+        participantLabel: 'М7',
+        playerFrom: 'north',
+        participantFrom: 'west',
+        playerMovement: 'straight',
+        participantMovement: 'right',
+        control: 'priority',
+        playerPriority: 'secondary',
+        participantPriority: 'main',
+        reaction: 'player-obstruction',
+        actualSpeedKmh: 5,
+        unimpededSpeedKmh: 8,
+      }),
+    ],
+  };
+  data.violations[1] = {
+    ...data.violations[1],
+    type: 'oncoming',
+    material: null,
+    causes: [cause('oncoming-lane', { marking: 'double-solid' })],
+  };
+  await seed(page, data);
+  await page.getByLabel('Вид нарушения', { exact: true }).selectOption('priority');
+  await expect(page.locator('.journal-list > button')).toHaveCount(1);
+  await page.locator('[data-entry-id="v-0"]').click();
+  await expect(page.getByText(/М7: с запада, направо/)).toBeVisible();
+  await expect(page.getByRole('link', { name: 'ПДД РФ · Пункт 13.9', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Повторить ситуацию', exact: true })).toHaveCount(
+    0,
+  );
+  await page.keyboard.press('Escape');
+  await expect(page.locator('[data-entry-id="v-0"]')).toBeFocused();
+  await expect(page.getByLabel('Вид нарушения', { exact: true })).toHaveValue('priority');
+  await page.getByLabel('Вид нарушения', { exact: true }).selectOption('oncoming');
+  await expect(page.locator('.journal-list > button')).toHaveCount(1);
+  await page.locator('[data-entry-id="v-1"]').click();
+  await expect(page.getByText(/действует двойная сплошная/)).toBeVisible();
+  await page.keyboard.press('Escape');
+  await page.getByLabel('Вид нарушения', { exact: true }).selectOption('stop');
+  await expect(page.locator('[data-entry-id="v-2"]')).toBeVisible();
+});
+
 test('every cause has its own readable explanation and checked source without a question', async ({
   page,
 }) => {
@@ -107,7 +161,7 @@ test('every cause has its own readable explanation and checked source without a 
 
   for (const entry of data.violations) {
     await page.locator(`[data-entry-id="${entry.id}"]`).click();
-    await expect(page.getByText(/Проверено: 2026-10-14/)).toBeVisible();
+    await expect(page.getByText(/Проверено: 2026-10-18/)).toBeVisible();
     await expect(
       page.getByRole('link', { name: `ПДД РФ · ${entry.causes[0].reference}`, exact: true }),
     ).toHaveAttribute('href', entry.causes[0].referenceUrl!);
@@ -369,27 +423,26 @@ test('speed limit stays visible despite legacy settings and a clean trip has its
   await page.getByRole('button', { name: 'Да, удалить' }).click();
   await expect(page.getByText('Всего: 0 поездок · 0 нарушений · 0 ответов')).toBeVisible();
 });
-test('city speed violation is reachable by driving and remains readable without a question', async ({
+test('a recorded city speed violation stays readable without raising the handling speed', async ({
   page,
 }) => {
-  await page.goto('/');
-  await page.getByRole('button', { name: 'Поехать в город', exact: true }).click();
-  await page.keyboard.down('KeyW');
-  await expect(page.getByRole('dialog', { name: 'Разбор нарушения' })).toBeVisible({
-    timeout: 12000,
-  });
-  await page.keyboard.up('KeyW');
-  await page.getByRole('button', { name: 'Продолжить', exact: true }).click();
-  await page.keyboard.down('KeyW');
-  await expect(page.getByRole('heading', { name: 'Превышение скорости в городе' })).toBeVisible({
-    timeout: 12000,
-  });
-  await page.keyboard.up('KeyW');
+  const data = fixture();
+
+  data.violations[0] = {
+    ...data.violations[0],
+    type: 'speed',
+    speed: 61 / 3.6,
+    roadObjectId: 'city-60',
+    causes: [cause('city-speed-limit', { speedKmh: 61, limitKmh: 60 })],
+    material: null,
+  };
+  await seed(page, data);
+  await page.getByRole('button', { name: /Превышение скорости в городе/ }).click();
   await expect(page.getByRole('link', { name: 'ПДД РФ · Пункт 10.2' })).toHaveAttribute(
     'href',
     'https://www.consultant.ru/document/cons_doc_LAW_2709/803907f6876a655f77995888208488d4bfccf247/',
   );
-  await expect(page.getByText(/Проверено: 2026-10-14/)).toBeVisible();
+  await expect(page.getByText(/Проверено: 2026-10-18/)).toBeVisible();
   await expect(page.getByText(/Лимит: 60 км\/ч/)).toBeVisible();
 
   for (const [width, height] of [
@@ -403,13 +456,12 @@ test('city speed violation is reachable by driving and remains readable without 
   }
 
   await page.screenshot({ path: 'test-results/city-speed-review.png' });
-  await page.getByRole('button', { name: 'Продолжить', exact: true }).click();
-  await expect(page.getByRole('dialog')).toBeHidden();
+  await page.getByRole('button', { name: 'Назад в журнал', exact: true }).click();
   await page.reload();
   await page.getByRole('button', { name: /^Журнал/ }).click();
   await page.getByRole('button', { name: /Превышение скорости в городе/ }).click();
   await expect(page.getByRole('link', { name: 'ПДД РФ · Пункт 10.2' })).toBeVisible();
-  await expect(page.getByText(/Проверено: 2026-10-14/)).toBeVisible();
+  await expect(page.getByText(/Проверено: 2026-10-18/)).toBeVisible();
 });
 
 test('pause and keyboard indicator toggle remain usable in a compact viewport', async ({

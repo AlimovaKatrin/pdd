@@ -1,0 +1,2 @@
+# Preserve upstream line endings and required context spaces in dependency patches.
+patches/*.patch -text -whitespace

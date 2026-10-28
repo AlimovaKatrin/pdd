@@ -1,3 +1,4 @@
+import { validateNetwork } from './validate-network';
 import type { Point, RoadMap, StopLine } from './model';
 
 export function validateMap(map: RoadMap): RoadMap {
@@ -33,6 +34,7 @@ export function validateMap(map: RoadMap): RoadMap {
     !map.version ||
     !map.citySpeedLimit ||
     !positive(map.citySpeedLimit.limit) ||
+    map.citySpeedLimit.reference !== '10.2' ||
     !positive(map.width) ||
     !positive(map.height) ||
     !point(map.spawn) ||
@@ -82,13 +84,29 @@ export function validateMap(map: RoadMap): RoadMap {
         point(c.to) &&
         Math.hypot(c.to.x - c.from.x, c.to.y - c.from.y) > 0 &&
         positive(c.speed) &&
+        (c.label === undefined || (typeof c.label === 'string' && c.label.trim().length > 0)) &&
         Number.isInteger(c.restartTicks) &&
-        c.restartTicks > 0,
+        c.restartTicks > 0 &&
+        (c.initialWaitTicks === undefined ||
+          (Number.isInteger(c.initialWaitTicks) && c.initialWaitTicks >= 0)) &&
+        (!c.signalId ||
+          (map.signals?.some((signal) => signal.id === c.signalId) &&
+            map.network?.junctions.some(
+              (junction) =>
+                junction.id === c.junctionId &&
+                junction.control === 'signals' &&
+                junction.approaches.some((approach) => approach.signalId === c.signalId),
+            ) &&
+            map.network?.lanes.some(
+              (lane) => lane.id === c.outgoingLaneId && lane.startJunction === c.junctionId,
+            ))),
     ) ||
     !(map.intersections ?? []).every((j) => point(j) && positive(j.radius))
   ) {
     throw new Error('Invalid traffic configuration');
   }
+
+  validateNetwork(map);
 
   return map;
 }

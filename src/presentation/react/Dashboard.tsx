@@ -1,4 +1,5 @@
-import { ArrowLeft, ArrowRight, Pause, Play, RotateCcw, Square } from 'lucide-react';
+import { displayedSpeed } from '../view-models/driving-speed';
+import { ArrowLeft, ArrowRight, MapPin, Pause, Play, RotateCcw, Square } from 'lucide-react';
 import type { GameSession, SessionSnapshot } from '../../use-cases/session/game-session';
 
 export function Dashboard({
@@ -12,7 +13,7 @@ export function Dashboard({
 }) {
   const { driving } = state;
 
-  const speed = driving.speedKmh;
+  const speed = displayedSpeed(driving.speedKmh, driving.speedLimit);
 
   const paused = state.started && state.pauses.length > 0;
 
@@ -54,6 +55,14 @@ export function Dashboard({
         {drivingStatus}
       </span>
       <div className="trip-controls" role="group" aria-label="Управление поездкой">
+        <button
+          className="icon-button"
+          aria-label="Вернуться на дорогу"
+          title="Вернуться на дорогу"
+          onClick={() => act(() => session.returnToRoad())}
+        >
+          <MapPin size={19} />
+        </button>
         <button
           className="icon-button"
           aria-label={paused ? 'Возобновить' : 'Пауза'}

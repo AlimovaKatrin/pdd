@@ -46,6 +46,14 @@ export function Incident({
       current.causes.map((cause) => cause.code),
     );
 
+  let reviewClass = '';
+
+  if (!state.question) {
+    reviewClass = 'explanation-only';
+  } else if (paged) {
+    reviewClass = `paged-incident pane-${pane}`;
+  }
+
   return (
     <Modal
       className="incident-modal"
@@ -77,7 +85,7 @@ export function Incident({
           Попытки ({timeline.length})
         </button>
       </div>
-      {paged && !attempts && (
+      {paged && !attempts && state.question && (
         <div className="compact-review-tabs">
           <button
             className="text-button"
@@ -113,7 +121,7 @@ export function Incident({
           )}
         </div>
       ) : (
-        <div className={`incident-grid ${paged ? `paged-incident pane-${pane}` : ''}`}>
+        <div className={`incident-grid ${reviewClass}`}>
           <IncidentContext
             current={current}
             selectedCause={selectedCause}
@@ -123,14 +131,16 @@ export function Incident({
             onCausePageChange={setCausePage}
             onReveal={() => session.reveal()}
           />
-          <IncidentQuestion
-            current={current}
-            question={state.question}
-            answer={state.answer}
-            revealed={state.revealed}
-            onAnswer={(index) => session.answerQuestion(index)}
-            onReveal={() => session.reveal()}
-          />
+          {state.question && (
+            <IncidentQuestion
+              current={current}
+              question={state.question}
+              answer={state.answer}
+              revealed={state.revealed}
+              onAnswer={(index) => session.answerQuestion(index)}
+              onReveal={() => session.reveal()}
+            />
+          )}
         </div>
       )}
       <div className="modal-actions">
@@ -142,7 +152,7 @@ export function Incident({
             }
           >
             <RotateCcw size={16} />
-            {session.canRetry(current.id) ? 'Повторить ситуацию' : 'На начало улицы'}
+            {session.canRetry(current.id) ? 'Повторить ситуацию' : 'Вернуться на дорогу'}
           </button>
         )}
         <button className="primary" onClick={() => act(() => session.continueTrip())}>
@@ -151,7 +161,8 @@ export function Incident({
       </div>
       {!session.canRetry(current.id) && (
         <p className="source-note">
-          Точное состояние этой ситуации недоступно. Возврат начнёт поездку с безопасного места.
+          Точное состояние этой ситуации недоступно. Возврат перенесёт машину в свободное безопасное
+          место и сохранит текущую поездку.
         </p>
       )}
     </Modal>
